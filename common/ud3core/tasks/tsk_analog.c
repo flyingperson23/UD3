@@ -395,6 +395,20 @@ void ac_precharge_bus_scheme(){
 }
 
 void ac_dual_meas_scheme(){
+    if(!relay_read_bus() && !relay_read_charge_end()){
+        alarm_push(ALM_PRIO_INFO, "BUS: Charging", ALM_NO_VALUE);
+        sysfault.charge=1;
+        relay_write_bus(1);
+        tt.n.bus_status.value = BUS_CHARGING;
+    }    
+    // enable boost in charge mode(?) i.e. v_target = min(vbus, tt.n.bus_v.value+50)
+    if (abs(configuration.vbus - tt.n.bus_v.value) < 50 && relay_read_bus()) {
+        alarm_push(ALM_PRIO_INFO, "BUS: Ready", ALM_NO_VALUE);
+        relay_write_charge_end(1);
+        tt.n.bus_status.value = BUS_READY;
+        sysfault.charge=0;
+        // set boost to non-charge mode
+    }
 }
 
 void ac_precharge_fixed_delay(){
@@ -404,7 +418,7 @@ void ac_precharge_fixed_delay(){
         xTimerStart(xCharge_Timer,0);
         relay_write_bus(1);
         tt.n.bus_status.value = BUS_CHARGING;
-    }    
+    }
 }
 
 void vCharge_Timer_Callback(TimerHandle_t xTimer){
@@ -440,7 +454,7 @@ void control_precharge(void) { //this gets called from tsk_analogs.c when the AD
                 ac_precharge_bus_scheme();
             break;
             case AC_DUAL_MEAS_SCHEME:
-                ac_dual_meas_scheme();      // Not implemented
+                ac_dual_meas_scheme();
             break;
             case AC_PRECHARGE_FIXED_DELAY:
                 ac_precharge_fixed_delay();

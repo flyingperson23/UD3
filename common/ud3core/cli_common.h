@@ -73,6 +73,7 @@ extern parameter_entry confparam[];
 volatile uint8_t qcw_reg;
 
 struct config_struct{
+    uint16_t vbus;
     uint8_t watchdog;
     uint16_t watchdog_timeout;
     uint16_t max_tr_pw;

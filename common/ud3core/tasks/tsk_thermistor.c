@@ -195,8 +195,8 @@ void run_temp_check(TEMP_FAULT * ret) {
             
             break;
         case FAN_TEMP2_RELAY3:
-            Fan_Write(temp1_high);
-            temp_pwm_WriteCompare1(temp2_high? 255 :0);
+            //Fan_Write(temp1_high);
+            //temp_pwm_WriteCompare1(temp2_high? 255 :0);
             break;
         case FAN_TEMP2_RELAY4:
             Fan_Write(temp1_high);

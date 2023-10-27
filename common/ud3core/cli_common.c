@@ -96,6 +96,7 @@ enum uart_ivo{
 * Initializes parameters with default values
 ******************************************************************************/
 void init_config(){
+    configuration.vbus = 400;
     configuration.watchdog = 1;
     configuration.watchdog_timeout = 1000;
     configuration.max_tr_pw = 1000;
@@ -124,7 +125,7 @@ void init_config(){
     configuration.pid_temp_i = 0.2;
     configuration.temp2_setpoint = 30;
     configuration.temp2_mode = 0;
-    configuration.ps_scheme = 2;
+    configuration.ps_scheme = 3;
     configuration.autotune_s = 1;
     configuration.baudrate = 460800;
     configuration.r_top = 500000;
@@ -201,6 +202,7 @@ void init_config(){
 
 parameter_entry confparam[] = {
     //       Parameter Type ,Visible,"Text   "         , Value ptr                     ,Min     ,Max    ,Div    ,Callback Function           ,Help text
+    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"vbus"            , configuration.vbus            , 400    ,1200   ,0      ,NULL                        ,"Bus voltage [V]")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"pw"              , param.pw                      , 0      ,10000  ,0      ,callback_TRFunction         ,"Pulsewidth [us]")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"pwp"             , param.pwp                     , 0      ,1000   ,10     ,callback_TRPFunction        ,"Pulsewidth [%]")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"pwd"             , param.pwd                     , 0      ,60000  ,0      ,callback_TRFunction         ,"Pulsewidthdelay")
@@ -881,21 +883,21 @@ uint8_t CMD_reset(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
 ******************************************************************************/
 uint8_t CMD_relay(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
     if(argCount<2 || strcmp(args[0], "-?") == 0){
-        ttprintf("Usage: relay 3/4 [1|0]\r\n");
+        ttprintf("Usage: relay 4 [1|0]\r\n");
         return TERM_CMD_EXIT_SUCCESS;
     }
     
     uint8_t r_number = atoi(args[0]);
     uint8_t value = atoi(args[1]);
     if(value > 1){
-        ttprintf("Usage: relay 3/4 [1|0]\r\n");
+        ttprintf("Usage: relay 4 [1|0]\r\n");
         return TERM_CMD_EXIT_SUCCESS;
     }
     
-    if(r_number == 3){
-        temp_pwm_WriteCompare1(value ? 255 : 0);
-        return TERM_CMD_EXIT_SUCCESS;
-    }
+    //if(r_number == 3){
+    //    temp_pwm_WriteCompare1(value ? 255 : 0);
+    //    return TERM_CMD_EXIT_SUCCESS;
+    //}
     if(r_number == 4){
         temp_pwm_WriteCompare2(value ? 255 : 0);
         return TERM_CMD_EXIT_SUCCESS;
@@ -1004,7 +1006,7 @@ uint8_t CMD_signals(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         ttprintf(" Relay 2: ");
         send_signal_state_wo_new(relay_read_charge_end(),pdFALSE,handle);
         ttprintf(" Relay 3: ");
-        send_signal_state_wo_new(Relay3_Read(),pdFALSE,handle);
+        send_signal_state_wo_new(0,pdFALSE,handle);
         ttprintf(" Relay 4: ");
         send_signal_state_new(Relay4_Read(),pdFALSE,handle);
         ttprintf("Fan: ");
