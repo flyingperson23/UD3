@@ -356,8 +356,9 @@ void tsk_cli_Start(void) {
         TERM_addCommandConstAC(CMD_nvm, "nvm","NVM-Test Func", AC_nvm,&TERM_cmdListHead); 
         
         TERM_addCommandConstAC(CMD_qcw, "qcw","QCW [start/stop]",AC_start_stop,&TERM_cmdListHead);
-        TERM_addCommand(CMD_relay, "relay","Switch user relay 3/4",0,&TERM_cmdListHead);
-        TERM_addCommand(CMD_pwm, "pwm","Set user pwm 3/4",0,&TERM_cmdListHead);
+        //TERM_addCommand(CMD_relay, "relay","Switch user relay 3/4",0,&TERM_cmdListHead);
+        //TERM_addCommand(CMD_pwm, "pwm","Set user pwm 3/4",0,&TERM_cmdListHead);
+        TERM_addCommand(CMD_vbus, "vbus","Set bus voltage", 0, &TERM_cmdListHead);
         TERM_addCommand(CMD_reset, "reset","Resets UD3",0,&TERM_cmdListHead);
         TERM_addCommand(CMD_status, "status","Displays coil status",0,&TERM_cmdListHead);
         TERM_addCommand(CMD_tterm, "tterm","Changes terminal mode",0,&TERM_cmdListHead);

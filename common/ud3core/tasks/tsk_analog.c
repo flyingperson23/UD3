@@ -402,13 +402,16 @@ void ac_dual_meas_scheme(){
         tt.n.bus_status.value = BUS_CHARGING;
     }    
     // enable boost in charge mode(?) i.e. v_target = min(vbus, tt.n.bus_v.value+50)
-    if (abs(configuration.vbus - tt.n.bus_v.value) < 50 && relay_read_bus()) {
-        alarm_push(ALM_PRIO_INFO, "BUS: Ready", ALM_NO_VALUE);
-        relay_write_charge_end(1);
-        tt.n.bus_status.value = BUS_READY;
-        sysfault.charge=0;
+    
+    
+    
+    //if (abs(configuration.vbus - tt.n.bus_v.value) < 50 && relay_read_bus()) {
+    //    alarm_push(ALM_PRIO_INFO, "BUS: Ready", ALM_NO_VALUE);
+    //    relay_write_charge_end(1);
+    //    tt.n.bus_status.value = BUS_READY;
+    //    sysfault.charge=0;
         // set boost to non-charge mode
-    }
+    //}
 }
 
 void ac_precharge_fixed_delay(){

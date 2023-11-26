@@ -66,6 +66,7 @@
         
 	
 uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+uint8_t callback_vbus(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 uint8_t callback_TuneFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 uint8_t callback_TTupdateFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
@@ -96,7 +97,6 @@ enum uart_ivo{
 * Initializes parameters with default values
 ******************************************************************************/
 void init_config(){
-    configuration.vbus = 400;
     configuration.watchdog = 1;
     configuration.watchdog_timeout = 1000;
     configuration.max_tr_pw = 1000;
@@ -202,7 +202,6 @@ void init_config(){
 
 parameter_entry confparam[] = {
     //       Parameter Type ,Visible,"Text   "         , Value ptr                     ,Min     ,Max    ,Div    ,Callback Function           ,Help text
-    ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"vbus"            , configuration.vbus            , 400    ,1200   ,0      ,NULL                        ,"Bus voltage [V]")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"pw"              , param.pw                      , 0      ,10000  ,0      ,callback_TRFunction         ,"Pulsewidth [us]")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"pwp"             , param.pwp                     , 0      ,1000   ,10     ,callback_TRPFunction        ,"Pulsewidth [%]")
     ADD_PARAM(PARAM_DEFAULT ,pdTRUE ,"pwd"             , param.pwd                     , 0      ,60000  ,0      ,callback_TRFunction         ,"Pulsewidthdelay")
@@ -582,6 +581,37 @@ uint8_t con_minstat(TERMINAL_HANDLE * handle){
     return 1; 
 }
 
+
+
+
+
+
+
+
+
+uint8_t CMD_vbus(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
+    if (argCount != 1) {
+        ttprintf("vbus [voltage]\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+    uint16_t val = atoi(args[0]);
+    if (val > 255) {
+        val = 255;   
+    }
+    temp_pwm_WriteCompare1(val);
+    return TERM_CMD_EXIT_SUCCESS;
+}
+
+
+
+
+
+
+
+
+
+
+
 /*****************************************************************************
 * Prints the ethernet connections
 ******************************************************************************/
@@ -882,26 +912,8 @@ uint8_t CMD_reset(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
 * Switches the user relay 3 or 4
 ******************************************************************************/
 uint8_t CMD_relay(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
-    if(argCount<2 || strcmp(args[0], "-?") == 0){
-        ttprintf("Usage: relay 4 [1|0]\r\n");
-        return TERM_CMD_EXIT_SUCCESS;
-    }
     
-    uint8_t r_number = atoi(args[0]);
-    uint8_t value = atoi(args[1]);
-    if(value > 1){
-        ttprintf("Usage: relay 4 [1|0]\r\n");
-        return TERM_CMD_EXIT_SUCCESS;
-    }
-    
-    //if(r_number == 3){
-    //    temp_pwm_WriteCompare1(value ? 255 : 0);
-    //    return TERM_CMD_EXIT_SUCCESS;
-    //}
-    if(r_number == 4){
-        temp_pwm_WriteCompare2(value ? 255 : 0);
-        return TERM_CMD_EXIT_SUCCESS;
-    }
+    ttprintf("Disabled");
     return TERM_CMD_EXIT_SUCCESS;
 }
 
@@ -909,25 +921,7 @@ uint8_t CMD_relay(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
 * Switches the user relay 3 or 4
 ******************************************************************************/
 uint8_t CMD_pwm(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
-    if(argCount<2 || strcmp(args[0], "-?") == 0){
-        ttprintf("Usage: pwm 3/4 [0-255]\r\n");
-        return TERM_CMD_EXIT_SUCCESS;
-    }
-    
-    uint8_t pwm_number = atoi(args[0]);
-    uint8_t value = atoi(args[1]);
-    if(value > 255){
-        value = 255;
-    }
-    
-    if(pwm_number == 3){
-        temp_pwm_WriteCompare1(value);
-        return TERM_CMD_EXIT_SUCCESS;
-    }
-    if(pwm_number == 4){
-        temp_pwm_WriteCompare2(value);
-        return TERM_CMD_EXIT_SUCCESS;
-    }
+    ttprintf("Disabled");
     return TERM_CMD_EXIT_SUCCESS;
 }
 
