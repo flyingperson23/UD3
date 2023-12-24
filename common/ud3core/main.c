@@ -50,6 +50,8 @@
 #include "tasks/tsk_duty.h"
 #include "tasks/tsk_hypervisor.h"
 
+#include "boost.h"
+
 /*
  * Installs the RTOS interrupt handlers and starts the peripherals.
  */
@@ -108,6 +110,8 @@ int main() {
 	tsk_thermistor_Start(); //Reads thermistors
 	tsk_fault_Start();		//Handles fault conditions
     tsk_duty_Start();
+    
+    boost_init();
     
     if(configuration.enable_display){
         tsk_display_Start();

@@ -55,6 +55,7 @@
 #include "version.h"
 #include "qcw.h"
 #include "system.h"
+#include "boost.h"
 
 #include "helper/digipot.h"
 
@@ -260,12 +261,12 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_fault_i"     , configuration.max_fault_i     , 0      ,2000   ,10     ,callback_i2tFunction        ,"Maximum fault current for 10s [A]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"baudrate"        , configuration.baudrate        , 1200   ,4000000,0      ,callback_baudrateFunction   ,"Serial baudrate")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ivo_uart"        , configuration.ivo_uart        , 0      ,11     ,0      ,callback_ivoUART            ,"[RX][TX] 0=not inverted 1=inverted")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"r_bus"           , configuration.r_top           , 100    ,1000000,1000   ,callback_TTupdateFunction   ,"Series resistor of voltage input [kOhm]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"r_bus"           , configuration.r_top           , 100    ,2000000,1000   ,callback_TTupdateFunction   ,"Series resistor of voltage input [kOhm]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ena_display"     , configuration.enable_display  , 0      ,6      ,0      ,NULL                        ,"Enables the WS2812 display")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"synth_filter"    , configuration.synth_filter    , 0      ,0      ,0      ,callback_synthFilter        ,"Synthesizer filter string")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"pid_curr_p"      , configuration.pid_curr_p      , 0      ,200    ,0      ,callback_pid                ,"Current PI")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"pid_curr_i"      , configuration.pid_curr_i      , 0      ,200    ,0      ,callback_pid                ,"Current PI")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_dc_curr"     , configuration.max_dc_curr     , 0      ,2000   ,10     ,callback_pid                ,"Maximum DC-Bus current [A] 0=off")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_dc_curr"     , configuration.max_dc_curr     , 0      ,2000   ,10     ,callback_max_dc_curr        ,"Maximum DC-Bus current [A] 0=off")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ena_ext_int"     , configuration.ext_interrupter , 0      ,2      ,0      ,callback_ext_interrupter    ,"Enable external interrupter 2=inverted")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"qcw_coil"        , configuration.is_qcw          , 0      ,1      ,0      ,NULL                        ,"Is QCW 1=true 0=false")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"vol_mod"         , interrupter.mod               , 0      ,1      ,0      ,callback_interrupter_mod    ,"0=pw 1=current modulation")
@@ -372,6 +373,11 @@ void update_ivo(){
         clear_bit(IVO_Control, IVO_LED_BIT);
     }
     
+}
+
+uint8_t callback_max_dc_curr(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
+    setIMax();
+    return pdPASS;
 }
 
 uint8_t callback_ivoUART(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
@@ -594,11 +600,22 @@ uint8_t CMD_vbus(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
         ttprintf("vbus [voltage]\r\n");
         return TERM_CMD_EXIT_SUCCESS;
     }
-    uint16_t val = atoi(args[0]);
-    if (val > 255) {
-        val = 255;   
+    
+    if (strcmp(args[0], "off")) {
+        // kill boost handler
+        temp_pwm_WriteCompare1(0);
+        vars.v_target = 0;
+        return TERM_CMD_EXIT_SUCCESS;
     }
-    temp_pwm_WriteCompare1(val);
+    
+    uint16_t val = atoi(args[0]);
+    
+    if (val < 400 || val > 800) {
+        ttprintf("vbus between 400v and 800v");
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+    
+    vars.v_target = (float) val;
     return TERM_CMD_EXIT_SUCCESS;
 }
 
@@ -721,8 +738,28 @@ uint8_t CMD_bootloader(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args)
 uint8_t CMD_udkill(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     
     if(argCount==0 || strcmp(args[0], "-?") == 0){
+        
+        /*
         ttprintf("Usage: kill [set|reset|get]\r\n");
+        return TERM_CMD_EXIT_SUCCESS;*/
+        
+        
+        // 'kill' is a fast E-stop command
+        interrupter_kill();
+    	USBMIDI_1_callbackLocalMidiEvent(0, (uint8_t*)kill_msg);
+    	bus_command = BUS_COMMAND_OFF;
+        
+        QCW_delete_timer();
+        
+    	interrupter1_control_Control = 0;
+    	QCW_enable_Control = 0;
+    	TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_GREEN);
+    	ttprintf("Killbit set\r\n");
+        alarm_push(ALM_PRIO_CRITICAL, "FAULT: Killbit set", ALM_NO_VALUE);
+    	TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);
         return TERM_CMD_EXIT_SUCCESS;
+        
+        
     }
     
     if(strcmp(args[0], "set") == 0){
@@ -970,6 +1007,10 @@ uint8_t CMD_signals(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         #else
         send_signal_state_new(1,pdTRUE,handle);
         #endif
+        ttprintf("Sysfault bus overvoltage: ");
+        send_signal_state_new(sysfault.ov, pdFALSE, handle);
+        ttprintf("Sysfault bus overcurrent: ");
+        send_signal_state_new(sysfault.oc, pdFALSE, handle);
         ttprintf("Sysfault driver undervoltage: ");
         send_signal_state_new(sysfault.uvlo,pdFALSE,handle);
         ttprintf("Sysfault Temp 1: ");

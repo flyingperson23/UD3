@@ -112,7 +112,7 @@ typedef struct
 _i2t i2t = {
     .limit = 0,
     .warning = 0,
-    .warning_level = 60,
+    .warning_level = 80,
     .leak = 0,
     .integral = 0
 };
@@ -268,6 +268,10 @@ void calculate_rms(void) {
     
     tt.n.primary_i.value = CT1_Get_Current(CT_PRIMARY);
     
+    
+    
+    
+    /*      decrease voltage in boost instead of duty cycle here
     if(configuration.max_dc_curr){
         param.temp_duty = configuration.max_tr_duty-pid_step(&pid_current,configuration.max_dc_curr,tt.n.batt_i.value);
         if(param.temp_duty != old_curr_setpoint){
@@ -278,7 +282,10 @@ void calculate_rms(void) {
             }
         }
         old_curr_setpoint = param.temp_duty;
-    }
+    }*/
+    
+    
+    
     
     if(configuration.max_const_i){  //Only do i2t calculation if enabled
         switch (i2t_calculate()){

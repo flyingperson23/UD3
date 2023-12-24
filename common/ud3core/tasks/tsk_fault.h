@@ -46,6 +46,8 @@ uint8_t bus_uv;
 uint8_t interlock;
 uint8_t link_state;
 uint8_t feedback;
+uint8_t oc;
+uint8_t ov;
 } SYSFAULT;
 
 extern SYSFAULT sysfault;
