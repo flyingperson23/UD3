@@ -601,14 +601,17 @@ uint8_t CMD_vbus(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
         return TERM_CMD_EXIT_SUCCESS;
     }
     
-    if (strcmp(args[0], "off")) {
+    uint16_t val = atoi(args[0]);
+    
+    if (strcmp(args[0], "off") || val < 10) {
         // kill boost handler
         temp_pwm_WriteCompare1(0);
         vars.v_target = 0;
+        stop();
+        alarm_push(ALM_PRIO_INFO, "Boost off", ALM_NO_VALUE);
         return TERM_CMD_EXIT_SUCCESS;
     }
     
-    uint16_t val = atoi(args[0]);
     
     if (val < 400 || val > 800) {
         ttprintf("vbus between 400v and 800v");
@@ -616,6 +619,7 @@ uint8_t CMD_vbus(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     }
     
     vars.v_target = (float) val;
+    alarm_push(ALM_PRIO_INFO, "Boost on", val);
     return TERM_CMD_EXIT_SUCCESS;
 }
 
