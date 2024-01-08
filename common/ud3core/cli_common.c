@@ -596,6 +596,27 @@ uint8_t con_minstat(TERMINAL_HANDLE * handle){
 
 
 uint8_t CMD_vbus(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
+    if (strcmp(args[0], "cfg")) {
+        float new = ((float) atoi(args[2])) / 100.0f;
+        if (strcmp(args[1], "vki")) {
+            controller_V.lag_ki = new;
+        }
+        if (strcmp(args[1], "iki")) {
+            controller_I.lag_ki = new;
+        }
+        if (strcmp(args[1], "vkp")) {
+            controller_V.Kp = new;
+        }
+        if (strcmp(args[1], "ikp")) {
+            controller_I.Kp = new;
+        }
+        if (strcmp(args[1], "vlpf")) {
+            controller_V.lpf_pole = new;
+        }
+        if (strcmp(args[1], "ilpf")) {
+            controller_I.lpf_pole = new;
+        }
+    }
     if (argCount != 1) {
         ttprintf("vbus [voltage]\r\n");
         return TERM_CMD_EXIT_SUCCESS;

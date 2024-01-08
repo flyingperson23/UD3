@@ -5,6 +5,7 @@
 #include "tasks/tsk_fault.h"
 #include "tasks/tsk_analog.h"
 #include "alarmevent.h"
+#include "telemetry.h"
 
 void stop() {
     //vars.v_target = 0;
@@ -16,23 +17,24 @@ void stop() {
 
 CY_ISR(isr_boost) {
     //check limits
-    if (vars.v_bridge / vars.v_target > 1.2f) {
+    if (vars.v_target > tt.n.batt_v.value * 1.2 && vars.v_bridge > 1.2 * vars.v_target) {
         if (sysfault.ov == 0) {
             alarm_push(ALM_PRIO_CRITICAL, "Bus: Overvoltage ", vars.v_bridge);
         }
         sysfault.ov = 1;
         stop();
-    } else if (vars.i_bridge / vars.i_target > 1.2f) {
+    } else if (vars.i_target * 10.0f > configuration.max_fault_i) {
         if (sysfault.oc == 0) {
             alarm_push(ALM_PRIO_CRITICAL, "Bus: Overcurrent ", vars.i_bridge);
         }
         sysfault.oc = 1;
         stop();
-    } else if (bus_command != BUS_COMMAND_ON || tsk_fault_is_fault()) {
+    } else if (bus_command != BUS_COMMAND_ON || tsk_fault_is_fault() || tt.n.batt_v.value * 1.2 > vars.v_target) {
         stop();
     } else {
         // set vars
-    
+        vars.v_bridge = tt.n.bus_v.value;
+        vars.i_bridge = tt.n.batt_i.value;
         // get dtc's
         vars.dtc_v = LPF_Update(&controller_V, vars.v_target - vars.v_bridge);
         vars.dtc_i = LPF_Update(&controller_I, vars.i_target - vars.i_bridge);
