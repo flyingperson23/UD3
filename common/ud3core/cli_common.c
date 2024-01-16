@@ -602,12 +602,12 @@ uint8_t CMD_vbus(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
         return TERM_CMD_EXIT_SUCCESS;
     }
     if (!strcmp(args[0], "cfg")) {
-        float new = ((float) atoi(args[2])) / 100000000.0f;
+        uint32_t new = ((uint32_t) atoi(args[2]));
         if (!strcmp(args[1], "vki")) {
-            controller_V.lag_ki = new;
+            controller_V.Ki = new;
         }
         if (!strcmp(args[1], "iki")) {
-            controller_I.lag_ki = new;
+            controller_I.Ki = new;
         }
         if (!strcmp(args[1], "vkp")) {
             controller_V.Kp = new;
@@ -615,20 +615,27 @@ uint8_t CMD_vbus(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
         if (!strcmp(args[1], "ikp")) {
             controller_I.Kp = new;
         }
-        if (!strcmp(args[1], "vlpf")) {
-            controller_V.lpf_pole = new;
+        if (!strcmp(args[1], "vkd")) {
+            controller_V.Kd = new;
         }
-        if (!strcmp(args[1], "ilpf")) {
-            controller_I.lpf_pole = new;
+        if (!strcmp(args[1], "ikd")) {
+            controller_I.Kd = new;
+        }
+        if (!strcmp(args[1], "vid")) {
+            controller_V.Id = new;
+        }
+        if (!strcmp(args[1], "iid")) {
+            controller_I.Id = new;
         }
         return TERM_CMD_EXIT_SUCCESS;
     }
     if (!strcmp(args[0], "get")) {
         ttprintf("from tt vbridge: %i, ibridge: %i \r\n", tt.n.bus_v.value, tt.n.batt_i.value);
-        ttprintf("from vars vbridge: %f, ibridge: %f \r\n", vars.v_bridge, vars.i_bridge);
-        ttprintf("v_target: %f, i_target: %f \r\n", vars.v_target, vars.i_target);
-        ttprintf("dtci: %f, dtcv: %f, dtc: %f \r\n", vars.dtc_i, vars.dtc_v, vars.dtc);
-        ttprintf("vki: %f, vkp: %f", controller_V.lag_ki, controller_V.Kp);
+        ttprintf("from vars vbridge: %i, ibridge: %i \r\n", vars.v_bridge, vars.i_bridge);
+        ttprintf("v_target: %i, i_target: %i \r\n", vars.v_target, vars.i_target);
+        ttprintf("dtci: %i, dtcv: %i, dtc: %i \r\n", vars.dtc_i, vars.dtc_v, vars.dtc);
+        ttprintf("vki: %i, vkp: %i, vkd: %i \r\n", controller_V.Ki, controller_V.Kp, controller_V.Kd);
+        ttprintf("iki: %i, ikp: %i, ikd: %i \r\n", controller_I.Ki, controller_I.Kp, controller_I.Kd);
         return TERM_CMD_EXIT_SUCCESS;
     }
     if (argCount != 1) {

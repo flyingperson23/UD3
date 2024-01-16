@@ -1,4 +1,4 @@
-#include <stdint.h>
+
 
     #ifndef BOOST_H
     #define BOOST_H
@@ -7,16 +7,16 @@
     
         
     struct boost {
-        float v_bridge; //current bridge voltage
-        float v_target; //target voltage
+        int v_bridge; //current bridge voltage
+        int v_target; //target voltage
         
-        float i_bridge; //current current
-        float i_target; //target current;
+        int i_bridge; //current current
+        int i_target; //target current;
         
-        float dtc; //duty cycle
+        int dtc; //duty cycle  (* 10^8)
         
-        float dtc_v; //current-based dtc change
-        float dtc_i; //voltage-based dtc change
+        int dtc_v; //current-based dtc change  (* 10^8)
+        int dtc_i; //voltage-based dtc change  (* 10^8)
         
     };
     typedef struct boost BoostStruct;

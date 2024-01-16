@@ -1,28 +1,22 @@
 #ifndef LPF_PI_H
 #define LPF_PI_H
 
-typedef struct{
-	float lpf_pole;
-	float lag_ki;
-	float Kp;
-	float cmd_lim_min, cmd_lim_max;
-
-	float E[2];
-	float LPF_E1[2];
-	float LPF_E2[2];
-
-	float integrator;
-	float Y;
-
-	unsigned char cmd_saturation;
+typedef struct{    
+    int Ki;  // integral constant
+    int Kp;  // proportional constant
+    int Kd;  // derivative constant
+    int I;  // integral
+    int E;  // error
+    int E2; // last error
+    int D;  // derivative
+    int Y; // output
+    int Id; // integral divisor
 
 	} LPFStruct;
 
 
-float LPF_Update(LPFStruct *controller, float error_in);
+int LPF_Update(LPFStruct *controller, int error_in);
 
-void LPF_Reset(LPFStruct *controller);
-
-void constrain(float *x, float min, float max);
+void constrain(int *x, int min, int max);
 
 #endif
