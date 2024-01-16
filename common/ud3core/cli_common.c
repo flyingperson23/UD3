@@ -85,6 +85,7 @@ void update_ivo();
 
 cli_config configuration;
 cli_parameter param;
+    
 
 enum uart_ivo{
     UART_IVO_NONE=0,
@@ -596,26 +597,39 @@ uint8_t con_minstat(TERMINAL_HANDLE * handle){
 
 
 uint8_t CMD_vbus(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
-    if (strcmp(args[0], "cfg")) {
-        float new = ((float) atoi(args[2])) / 100.0f;
-        if (strcmp(args[1], "vki")) {
+    if (!strcmp(args[0], "set")) {
+        temp_pwm_WriteCompare1(atoi(args[1]));
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+    if (!strcmp(args[0], "cfg")) {
+        float new = ((float) atoi(args[2])) / 100000000.0f;
+        if (!strcmp(args[1], "vki")) {
             controller_V.lag_ki = new;
         }
-        if (strcmp(args[1], "iki")) {
+        if (!strcmp(args[1], "iki")) {
             controller_I.lag_ki = new;
         }
-        if (strcmp(args[1], "vkp")) {
+        if (!strcmp(args[1], "vkp")) {
             controller_V.Kp = new;
         }
-        if (strcmp(args[1], "ikp")) {
+        if (!strcmp(args[1], "ikp")) {
             controller_I.Kp = new;
         }
-        if (strcmp(args[1], "vlpf")) {
+        if (!strcmp(args[1], "vlpf")) {
             controller_V.lpf_pole = new;
         }
-        if (strcmp(args[1], "ilpf")) {
+        if (!strcmp(args[1], "ilpf")) {
             controller_I.lpf_pole = new;
         }
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+    if (!strcmp(args[0], "get")) {
+        ttprintf("from tt vbridge: %i, ibridge: %i \r\n", tt.n.bus_v.value, tt.n.batt_i.value);
+        ttprintf("from vars vbridge: %f, ibridge: %f \r\n", vars.v_bridge, vars.i_bridge);
+        ttprintf("v_target: %f, i_target: %f \r\n", vars.v_target, vars.i_target);
+        ttprintf("dtci: %f, dtcv: %f, dtc: %f \r\n", vars.dtc_i, vars.dtc_v, vars.dtc);
+        ttprintf("vki: %f, vkp: %f", controller_V.lag_ki, controller_V.Kp);
+        return TERM_CMD_EXIT_SUCCESS;
     }
     if (argCount != 1) {
         ttprintf("vbus [voltage]\r\n");
@@ -624,7 +638,7 @@ uint8_t CMD_vbus(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     
     uint16_t val = atoi(args[0]);
     
-    if (strcmp(args[0], "off") || val < 10) {
+    if (!strcmp(args[0], "off") || val < 10) {
         // kill boost handler
         temp_pwm_WriteCompare1(0);
         vars.v_target = 0;
@@ -634,13 +648,13 @@ uint8_t CMD_vbus(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     }
     
     
-    if (val < 400 || val > 800) {
-        ttprintf("vbus between 400v and 800v");
-        return TERM_CMD_EXIT_SUCCESS;
-    }
+    //if (val < 400 || val > 800) {
+    //    ttprintf("vbus between 400v and 800v");
+    //    return TERM_CMD_EXIT_SUCCESS;
+    //}
     
-    vars.v_target = (float) val;
-    alarm_push(ALM_PRIO_INFO, "Boost on", val);
+    vars.v_target = val;
+    alarm_push(ALM_PRIO_INFO, "Boost on", vars.v_target);
     return TERM_CMD_EXIT_SUCCESS;
 }
 

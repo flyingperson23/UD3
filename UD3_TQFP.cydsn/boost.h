@@ -6,7 +6,7 @@
     #include "lpf_pi.h"
     
         
-    typedef struct{
+    struct boost {
         float v_bridge; //current bridge voltage
         float v_target; //target voltage
         
@@ -18,8 +18,9 @@
         float dtc_v; //current-based dtc change
         float dtc_i; //voltage-based dtc change
         
-    } BoostStruct;
-            
+    };
+    typedef struct boost BoostStruct;
+    
     extern LPFStruct controller_V;
     extern LPFStruct controller_I;
     extern BoostStruct vars;
