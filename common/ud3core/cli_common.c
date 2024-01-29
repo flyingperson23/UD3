@@ -377,7 +377,6 @@ void update_ivo(){
 }
 
 uint8_t callback_max_dc_curr(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
-    setIMax();
     return pdPASS;
 }
 

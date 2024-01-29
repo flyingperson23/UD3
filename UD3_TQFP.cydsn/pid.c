@@ -7,7 +7,7 @@ void constrain(int *x, int min, int max){
     if (*x < min) { *x = min; }
 }
 
-int LPF_Update(LPFStruct *controller, int error_in) {
+int PID_Update(PIDStruct *controller, int error_in) {
    
     // error
 	controller->E = error_in;
