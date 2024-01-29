@@ -1,5 +1,5 @@
-#ifndef LPF_PI_H
-#define LPF_PI_H
+#ifndef PID_H
+#define PID_H
 
 typedef struct{    
     int Ki;  // integral constant
@@ -12,10 +12,10 @@ typedef struct{
     int Y; // output
     int Id; // integral divisor
 
-	} LPFStruct;
+	} PIDStruct;
 
 
-int LPF_Update(LPFStruct *controller, int error_in);
+int PID_Update(PIDStruct *controller, int error_in);
 
 void constrain(int *x, int min, int max);
 

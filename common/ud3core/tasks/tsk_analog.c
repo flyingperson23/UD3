@@ -263,7 +263,9 @@ void calculate_rms(void) {
             tt.n.batt_i.value = ((((int32_t)rms_filter(&current_idc, ADC_active_sample_buf[i].i_bus-params.ct2_offset_cnt)) * params.idc_ma_count) / 100);
         }
 
-		tt.n.avg_power.value = tt.n.batt_i.value * tt.n.bus_v.value / 10;
+        // ct2 is measuring inductor current, which is at input (batt) voltage, not bus voltage
+		//tt.n.avg_power.value = tt.n.batt_i.value * tt.n.bus_v.value / 10;
+        tt.n.avg_power.value = tt.n.batt_i.value * tt.n.batt_v.value / 10;
 	}
     
     tt.n.primary_i.value = CT1_Get_Current(CT_PRIMARY);
@@ -271,7 +273,7 @@ void calculate_rms(void) {
     
     
     
-    /*      decrease voltage in boost instead of duty cycle here
+    /*     todo: decrease voltage in boost instead of duty cycle here
     if(configuration.max_dc_curr){
         param.temp_duty = configuration.max_tr_duty-pid_step(&pid_current,configuration.max_dc_curr,tt.n.batt_i.value);
         if(param.temp_duty != old_curr_setpoint){

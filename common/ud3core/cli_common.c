@@ -633,7 +633,7 @@ uint8_t CMD_vbus(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
         ttprintf("from tt vbridge: %i, ibridge: %i \r\n", tt.n.bus_v.value, tt.n.batt_i.value);
         ttprintf("from vars vbridge: %i, ibridge: %i \r\n", vars.v_bridge, vars.i_bridge);
         ttprintf("v_target: %i, i_target: %i \r\n", vars.v_target, vars.i_target);
-        ttprintf("dtci: %i, dtcv: %i, dtc: %i \r\n", vars.dtc_i, vars.dtc_v, vars.dtc);
+        ttprintf("dtc: %i \r\n", vars.dtc);
         ttprintf("vki: %i, vkp: %i, vkd: %i \r\n", controller_V.Ki, controller_V.Kp, controller_V.Kd);
         ttprintf("iki: %i, ikp: %i, ikd: %i \r\n", controller_I.Ki, controller_I.Kp, controller_I.Kd);
         return TERM_CMD_EXIT_SUCCESS;
@@ -655,10 +655,10 @@ uint8_t CMD_vbus(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     }
     
     
-    //if (val < 400 || val > 800) {
-    //    ttprintf("vbus between 400v and 800v");
-    //    return TERM_CMD_EXIT_SUCCESS;
-    //}
+    if (val > 1000 || val < 0) {
+        ttprintf("vbus 0-1000v");
+        return TERM_CMD_EXIT_SUCCESS;
+    }
     
     vars.v_target = val;
     alarm_push(ALM_PRIO_INFO, "Boost on", vars.v_target);

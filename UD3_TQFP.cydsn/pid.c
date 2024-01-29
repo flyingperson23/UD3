@@ -1,4 +1,4 @@
-#include "lpf_pi.h"
+#include "pid.h"
 #include <stdlib.h>
 #include <stdint.h>
 
@@ -10,7 +10,7 @@ void constrain(int *x, int min, int max){
 int LPF_Update(LPFStruct *controller, int error_in) {
    
     // error
-	controller->E = controller->Kp*error_in;
+	controller->E = error_in;
     constrain(&(controller->E), -02000000, 02000000);
     
     // integral
@@ -25,5 +25,6 @@ int LPF_Update(LPFStruct *controller, int error_in) {
     controller->E2 = controller->E;
     
     controller->Y = (controller->Kp * controller->E) + ((controller->Ki * controller->I) / controller->Id) + (controller->Kd * controller->D);
+    constrain(&(controller->Y), -02000000, 02000000);
     return controller->Y;
 }
