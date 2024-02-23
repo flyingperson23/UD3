@@ -37,11 +37,11 @@
 #define AE_QUEUE_SIZE       50          //Length of the alarm and event queue
     
 //Analog-Task
-#define ADC_BUFFER_CNT      25          //ADC DMA buffer
-#define ADC_SAMPLE_CLK      32000       //Hz
+#define ADC_BUFFER_CNT      16          //ADC DMA buffer
+#define ADC_SAMPLE_CLK      40000       //Hz
 #define NEW_DATA_RATE_MS    ((1.0/(ADC_SAMPLE_CLK/4)) * ADC_BUFFER_CNT)    //ms
 #define CURRENT_PID_HZ      ((uint16_t)(1.0 / NEW_DATA_RATE_MS))           //Hz
-#define SAMPLES_COUNT       2048             //How many samples for RMS filter
+#define SAMPLES_COUNT       16             //How many samples for RMS filter
 #define BUSV_R_BOT          5000UL           //Bus voltage bottom resistor
     
 //Synthesizer

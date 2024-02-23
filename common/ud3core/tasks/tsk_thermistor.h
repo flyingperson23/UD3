@@ -43,7 +43,7 @@ uint8_t callback_temp_pid(parameter_entry * params, uint8_t index, TERMINAL_HAND
 
 uint8_t CMD_ntc(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 
-
+int32 offset;
 
 
 /*

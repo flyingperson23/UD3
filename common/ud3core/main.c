@@ -107,7 +107,7 @@ int main() {
 	tsk_midi_Start();       //MIDI synth
 	
 	tsk_analog_Start();		//Reads bus voltage and currents
-	tsk_thermistor_Start(); //Reads thermistors
+	//tsk_thermistor_Start(); //Reads thermistors
 	tsk_fault_Start();		//Handles fault conditions
     tsk_duty_Start();
     

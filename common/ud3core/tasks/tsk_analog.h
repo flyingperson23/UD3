@@ -83,12 +83,13 @@ void initialize_charging(void);
 void control_precharge(void);
 extern uint16_t vdriver_lut[9];
 
+uint16_t therm;
 
 typedef struct
 {
 	uint16_t v_bus;
 	uint16_t v_batt;
-    uint16_t i_bus;
+    uint16_t i_bus;  // actually thermistor now
     uint16_t v_driver;
 } adc_sample_t;
 

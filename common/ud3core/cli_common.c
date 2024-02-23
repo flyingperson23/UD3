@@ -633,8 +633,10 @@ uint8_t CMD_vbus(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
         ttprintf("from vars vbridge: %i, ibridge: %i \r\n", vars.v_bridge, vars.i_bridge);
         ttprintf("v_target: %i, i_target: %i \r\n", vars.v_target, vars.i_target);
         ttprintf("dtc: %i \r\n", vars.dtc);
-        ttprintf("vki: %i, vkp: %i, vkd: %i \r\n", controller_V.Ki, controller_V.Kp, controller_V.Kd);
-        ttprintf("iki: %i, ikp: %i, ikd: %i \r\n", controller_I.Ki, controller_I.Kp, controller_I.Kd);
+        ttprintf("vki: %i, vkp: %i, vkd: %i, vid: %i \r\n", controller_V.Ki, controller_V.Kp, controller_V.Kd, controller_V.Id);
+        ttprintf("iki: %i, ikp: %i, ikd: %i, iid: %i \r\n", controller_I.Ki, controller_I.Kp, controller_I.Kd, controller_I.Id);
+        ttprintf("v ibus: %i", ADC_active_sample_buf[0].i_bus);
+        ttprintf("adc %i %i %i %i %i", adc_dma_array[0], adc_dma_array[1], adc_dma_array[2], adc_dma_array[3], adc_dma_array[4]);
         return TERM_CMD_EXIT_SUCCESS;
     }
     if (argCount != 1) {
