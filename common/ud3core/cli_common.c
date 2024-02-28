@@ -596,6 +596,14 @@ uint8_t con_minstat(TERMINAL_HANDLE * handle){
 
 
 uint8_t CMD_vbus(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
+    if (argCount == 0) {
+        // kill boost handler
+        temp_pwm_WriteCompare1(0);
+        vars.v_target = 0;
+        stop();
+        alarm_push(ALM_PRIO_INFO, "Boost off", ALM_NO_VALUE);
+        return TERM_CMD_EXIT_SUCCESS;
+    }
     if (!strcmp(args[0], "set")) {
         temp_pwm_WriteCompare1(atoi(args[1]));
         return TERM_CMD_EXIT_SUCCESS;
@@ -635,8 +643,8 @@ uint8_t CMD_vbus(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
         ttprintf("dtc: %i \r\n", vars.dtc);
         ttprintf("vki: %i, vkp: %i, vkd: %i, vid: %i \r\n", controller_V.Ki, controller_V.Kp, controller_V.Kd, controller_V.Id);
         ttprintf("iki: %i, ikp: %i, ikd: %i, iid: %i \r\n", controller_I.Ki, controller_I.Kp, controller_I.Kd, controller_I.Id);
-        ttprintf("v ibus: %i", ADC_active_sample_buf[0].i_bus);
-        ttprintf("adc %i %i %i %i %i", adc_dma_array[0], adc_dma_array[1], adc_dma_array[2], adc_dma_array[3], adc_dma_array[4]);
+        ttprintf("v ibus: %i \r\n", ADC_active_sample_buf[0].i_bus);
+        ttprintf("ibus adc %i %i %i %i %i", adc_dma_array[0], adc_dma_array[1], adc_dma_array[2], adc_dma_array[3], adc_dma_array[4]);
         return TERM_CMD_EXIT_SUCCESS;
     }
     if (argCount != 1) {
@@ -656,8 +664,8 @@ uint8_t CMD_vbus(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     }
     
     
-    if (val > 1000 || val < 0) {
-        ttprintf("vbus 0-1000v");
+    if (val > 800 || val < 0) {
+        ttprintf("vbus 0-800v");
         return TERM_CMD_EXIT_SUCCESS;
     }
     
@@ -665,14 +673,6 @@ uint8_t CMD_vbus(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     alarm_push(ALM_PRIO_INFO, "Boost on", vars.v_target);
     return TERM_CMD_EXIT_SUCCESS;
 }
-
-
-
-
-
-
-
-
 
 
 

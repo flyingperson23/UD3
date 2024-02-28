@@ -278,7 +278,7 @@ void calculate_rms(void) {
         
 	}
     //tt.n.batt_i.value = vars.i_bridge;
-    tt.n.batt_i.value = ((uint32_t) rms_filter(&current_idc, vars.i_bridge)) / 10;
+    tt.n.batt_i.value = ((uint32_t) rms_filter(&current_idc, vars.i_bridge / 10));
     therm /= ADC_BUFFER_CNT;
     
     tt.n.primary_i.value = CT1_Get_Current(CT_PRIMARY);

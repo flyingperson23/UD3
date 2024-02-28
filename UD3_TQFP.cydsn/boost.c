@@ -51,6 +51,7 @@ CY_ISR(isr_boost) {
 void boost_loop() {
     // set vars
     vars.v_bridge = read_bus_mv2(ADC_active_sample_buf[0].v_bus) / 1000;
+    //vars.v_bridge = tt.n.bus_v.value / tt.n.bus_v.divider;
     
     //check limits
     if (vars.v_target * tt.n.batt_v.divider > tt.n.batt_v.value * 1.2 && vars.v_bridge > 1.2 * vars.v_target) {
@@ -75,7 +76,7 @@ void boost_loop() {
             vars.v_target2++;
         }
         
-        vars.i_target = vars.i_target * 9 / 10 + (vars.v_target2 - vars.v_bridge) * controller_V.Kp / 10;
+        vars.i_target = vars.i_target * (100-controller_V.Kp) / 100 + (vars.v_target2 - vars.v_bridge) * controller_V.Kp / 10;
         
         constrain(&vars.i_target, -configuration.max_dc_curr, configuration.max_dc_curr);
         
@@ -102,7 +103,7 @@ void dma_config() {
     uint8 DMA_Ibus_TD[1];
 
 	/* DMA Configuration for DMA_Ibus */
-	#define DMA_Ibus_BYTES_PER_BURST 1
+	#define DMA_Ibus_BYTES_PER_BURST 2
 	#define DMA_Ibus_REQUEST_PER_BURST 1
 	#define DMA_Ibus_SRC_BASE (CYDEV_PERIPH_BASE)
 	#define DMA_Ibus_DST_BASE (CYDEV_SRAM_BASE)
@@ -127,13 +128,13 @@ void boost_init() {
     
     controller_V.Ki = 0;
     controller_V.Id = 1;
-    controller_V.Kp = 10;
+    controller_V.Kp = 5; // prev 10
     controller_V.Kd = 0;
     
     
     controller_I.Ki = 25;
     controller_I.Id = 100;
-    controller_I.Kp = 15;
+    controller_I.Kp = 7; // prev 15
     controller_I.Kd = 0;
 }
 
