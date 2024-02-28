@@ -1,3 +1,5 @@
+This fork adds boost converter capability to the UD3. Make sure to connect bus voltage header to the bus, battery voltage to rectified mains (or battery input), bus current to a sensor measuring boost inductor current. Relay 3 is a (noninverting) output that should be used (and isolated!!) to drive the boost IGBT gate. Use command 'vbus [voltage]' to set bus voltage. Max 800. Max current is set by max_dc_curr. Overvoltage trips at 120% setpoint, overcurrent if current exceeds max_fault_i. PID for duty cycle is disabled as voltage will reduce to prevent overcurrent.
+
 UD3 PSOC
 ======
 
