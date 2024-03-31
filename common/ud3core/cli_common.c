@@ -55,6 +55,9 @@
 #include "version.h"
 #include "qcw.h"
 #include "system.h"
+#include "boost.h"
+
+#include "helper/digipot.h"
 
 
 #define UNUSED_VARIABLE(N) \
@@ -64,6 +67,7 @@
         
 	
 uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+uint8_t callback_vbus(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 uint8_t callback_DefaultFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 uint8_t callback_TuneFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 uint8_t callback_TTupdateFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
@@ -75,11 +79,13 @@ uint8_t callback_VisibleFunction(parameter_entry * params, uint8_t index, TERMIN
 uint8_t callback_MchFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 uint8_t callback_MchCopyFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 uint8_t callback_ivoUART(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+uint8_t callback_ivoLED(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
 
-void update_ivo_uart();
+void update_ivo();
 
 cli_config configuration;
 cli_parameter param;
+    
 
 enum uart_ivo{
     UART_IVO_NONE=0,
@@ -121,7 +127,7 @@ void init_config(){
     configuration.pid_temp_i = 0.2;
     configuration.temp2_setpoint = 30;
     configuration.temp2_mode = 0;
-    configuration.ps_scheme = 2;
+    configuration.ps_scheme = 3;
     configuration.autotune_s = 1;
     configuration.baudrate = 460800;
     configuration.r_top = 500000;
@@ -143,6 +149,10 @@ void init_config(){
     configuration.ext_interrupter = 0;
     configuration.pca9685 = 0;
     configuration.max_fb_errors = 0;
+    configuration.ivo_led = 0;
+    configuration.uvlo_analog = 0;
+    
+    configuration.min_fb_current = 88;
     
     configuration.noise_vol_div = 2;
     
@@ -150,6 +160,11 @@ void init_config(){
     configuration.ntc_r25 = 10000;
     
     configuration.idac = 185;
+    
+    configuration.vdrive = 15.0f;
+    
+    configuration.hw_rev = SYS_detect_hw_rev();
+    configuration.autostart = pdFALSE;
     
     interrupter.mod = INTR_MOD_PW;
     
@@ -175,7 +190,7 @@ void init_config(){
     param.qcw_ramp = 200;
     
     i2t_set_limit(configuration.max_const_i,configuration.max_fault_i,10000);
-    update_ivo_uart();
+    update_ivo();
     
     ramp.changed = pdTRUE;
     qcw_regenerate_ramp();
@@ -247,12 +262,12 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_fault_i"     , configuration.max_fault_i     , 0      ,2000   ,10     ,callback_i2tFunction        ,"Maximum fault current for 10s [A]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"baudrate"        , configuration.baudrate        , 1200   ,4000000,0      ,callback_baudrateFunction   ,"Serial baudrate")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ivo_uart"        , configuration.ivo_uart        , 0      ,11     ,0      ,callback_ivoUART            ,"[RX][TX] 0=not inverted 1=inverted")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"r_bus"           , configuration.r_top           , 100    ,1000000,1000   ,callback_TTupdateFunction   ,"Series resistor of voltage input [kOhm]")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"r_bus"           , configuration.r_top           , 100    ,2000000,1000   ,callback_TTupdateFunction   ,"Series resistor of voltage input [kOhm]")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ena_display"     , configuration.enable_display  , 0      ,6      ,0      ,NULL                        ,"Enables the WS2812 display")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"synth_filter"    , configuration.synth_filter    , 0      ,0      ,0      ,callback_synthFilter        ,"Synthesizer filter string")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"pid_curr_p"      , configuration.pid_curr_p      , 0      ,200    ,0      ,callback_pid                ,"Current PI")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"pid_curr_i"      , configuration.pid_curr_i      , 0      ,200    ,0      ,callback_pid                ,"Current PI")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_dc_curr"     , configuration.max_dc_curr     , 0      ,2000   ,10     ,callback_pid                ,"Maximum DC-Bus current [A] 0=off")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_dc_curr"     , configuration.max_dc_curr     , 0      ,2000   ,10     ,callback_max_dc_curr        ,"Maximum DC-Bus current [A] 0=off")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ena_ext_int"     , configuration.ext_interrupter , 0      ,2      ,0      ,callback_ext_interrupter    ,"Enable external interrupter 2=inverted")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"qcw_coil"        , configuration.is_qcw          , 0      ,1      ,0      ,NULL                        ,"Is QCW 1=true 0=false")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"vol_mod"         , interrupter.mod               , 0      ,1      ,0      ,callback_interrupter_mod    ,"0=pw 1=current modulation")
@@ -264,6 +279,12 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdFALSE,"d_calib"         , vdriver_lut                   , 0      ,0      ,0      ,NULL                        ,"For voltage measurement")
     ADD_PARAM(PARAM_CONFIG  ,pdFALSE,"hwGauge_cfg"     , hwGauges.rawData              , 0      ,0      ,0      ,callback_hwGauge            ,"gauge configs, configure with the \"hwGauge\" command")
     ADD_PARAM(PARAM_CONFIG  ,pdFALSE,"display_cfg"     , DISP_zones.rawData            , 0      ,0      ,0      ,callback_display            ,"display/led configs, configure with the \"display\" command")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"vdrive"          , configuration.vdrive          , 10     ,24     ,0      ,callback_ConfigFunction     ,"Change Vdrive voltage (digipot)")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ivo_led"         , configuration.ivo_led         , 0      ,1      ,0      ,callback_ivoLED             ,"LED invert option")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"uvlo_analog"     , configuration.uvlo_analog     , 0      ,32000  ,1000   ,NULL                        ,"UVLO from ADC 0=GPIO UVLO")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"hw_rev"          , configuration.hw_rev          , 0      ,1      ,0      ,callback_ConfigFunction     ,"Hardware revision 0=3.0 1=3.1")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"autostart"       , configuration.autostart       , 0      ,1      ,0      ,NULL                        ,"Autostart")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"min_fb_current"  , configuration.min_fb_current  , 0      ,255    ,0      ,callback_ConfigFunction     ,"Autostart")
 };
 
 
@@ -272,7 +293,7 @@ void eeprom_load(TERMINAL_HANDLE * handle){
     EEPROM_read_conf(confparam, PARAM_SIZE(confparam) ,0,handle);
     if(param.offtime<3) param.offtime=3;
     i2t_set_limit(configuration.max_const_i,configuration.max_fault_i,10000);
-    update_ivo_uart();
+    update_ivo();
     update_visibilty();
     uart_baudrate(configuration.baudrate);
     callback_synthFilter(NULL,0, handle);
@@ -282,6 +303,7 @@ void eeprom_load(TERMINAL_HANDLE * handle){
     callback_pid(confparam,0,handle);
     callback_temp_pid(confparam,0,handle);
     callback_ext_interrupter(confparam,0,handle);
+    callback_ConfigFunction(confparam,0,handle);
 }
 
 
@@ -304,6 +326,8 @@ void update_visibilty(void){
             set_visibility(confparam,CONF_SIZE, "ct2_offset",pdTRUE);
         break;
     }
+    
+    set_visibility(confparam, CONF_SIZE, "vdrive", configuration.hw_rev > 0 ? pdTRUE : pdFALSE);   
 
 }
 
@@ -325,27 +349,40 @@ void init_tt_if_enabled(TERMINAL_HANDLE* handle) {
 * Callback for invert option UART
 ******************************************************************************/
 
-void update_ivo_uart(){
-    IVO_UART_Control=UART_IVO_NONE;
+void update_ivo(){
     switch(configuration.ivo_uart){
     case UART_IVO_NONE:
+        clear_bit(IVO_Control, IVO_UART_TX_BIT);
+        clear_bit(IVO_Control, IVO_UART_RX_BIT);
         break;
     case UART_IVO_TX:
-        set_bit(IVO_UART_Control,1);
+        set_bit(IVO_Control, IVO_UART_TX_BIT);
+        clear_bit(IVO_Control, IVO_UART_RX_BIT);
         break;
     case UART_IVO_RX:
-        set_bit(IVO_UART_Control,0);
+        set_bit(IVO_Control, IVO_UART_RX_BIT);
+        clear_bit(IVO_Control, IVO_UART_TX_BIT);
         break;
     case UART_IVO_RX_TX:
-        set_bit(IVO_UART_Control,0);
-        set_bit(IVO_UART_Control,1);
+        set_bit(IVO_Control, IVO_UART_RX_BIT);
+        set_bit(IVO_Control, IVO_UART_TX_BIT);
         break;
+    }  
+    if(configuration.ivo_led){
+        set_bit(IVO_Control, IVO_LED_BIT);
+    }else{
+        clear_bit(IVO_Control, IVO_LED_BIT);
     }
+    
+}
+
+uint8_t callback_max_dc_curr(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
+    return pdPASS;
 }
 
 uint8_t callback_ivoUART(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     if(configuration.ivo_uart == UART_IVO_NONE || configuration.ivo_uart == UART_IVO_TX || configuration.ivo_uart == UART_IVO_RX || configuration.ivo_uart == UART_IVO_RX_TX){
-        update_ivo_uart();   
+        update_ivo();   
         return 1;
     }else{
         ttprintf("Only the folowing combinations are allowed\r\n");
@@ -355,6 +392,11 @@ uint8_t callback_ivoUART(parameter_entry * params, uint8_t index, TERMINAL_HANDL
         ttprintf("11 = rx and tx inverted\r\n");
         return 0;
     }
+}
+
+uint8_t callback_ivoLED(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
+    update_ivo();
+    return 1;
 }
 
 
@@ -381,7 +423,8 @@ uint8_t callback_TTupdateFunction(parameter_entry * params, uint8_t index, TERMI
         if(configuration.max_qcw_current>max_current_cmp) configuration.max_qcw_current = max_current_cmp;
     }
     uint8 sfflag = system_fault_Read();
-    system_fault_Control = 0; //halt tesla coil operation during updates!
+    
+    sysflt_set(pdTRUE); //halt tesla coil operation during updates!
     
     configure_ZCD_to_PWM();
     
@@ -447,7 +490,13 @@ uint8_t callback_baudrateFunction(parameter_entry * params, uint8_t index, TERMI
 ******************************************************************************/
 uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
     uint8 sfflag = system_fault_Read();
-    system_fault_Control = 0; //halt tesla coil operation during updates!
+    sysflt_set(pdTRUE); //halt tesla coil operation during updates!
+    
+    if(configuration.hw_rev > 0){
+        dcdc_ena_Write(0); //disable DCDC
+        digipot_set_voltage(configuration.vdrive);
+    }
+    
     WD_enable(configuration.watchdog);
     configure_interrupter();
 	initialize_charging();
@@ -459,6 +508,9 @@ uint8_t callback_ConfigFunction(parameter_entry * params, uint8_t index, TERMINA
 
     init_tt_if_enabled(handle);
     
+    if(configuration.hw_rev > 0){
+        dcdc_ena_Write(1); //enable DCDC
+    }
 	system_fault_Control = sfflag;
     return 1;
 }
@@ -534,6 +586,95 @@ uint8_t con_minstat(TERMINAL_HANDLE * handle){
     TERM_sendVT100Code(handle, _VT100_CURSOR_ENABLE,0);
     return 1; 
 }
+
+
+
+
+
+
+
+
+
+uint8_t CMD_vbus(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
+    if (argCount == 0) {
+        // kill boost handler
+        temp_pwm_WriteCompare1(0);
+        vars.v_target = 0;
+        stop();
+        alarm_push(ALM_PRIO_INFO, "Boost off", ALM_NO_VALUE);
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+    if (!strcmp(args[0], "set")) {
+        temp_pwm_WriteCompare1(atoi(args[1]));
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+    if (!strcmp(args[0], "cfg")) {
+        uint32_t new = ((uint32_t) atoi(args[2]));
+        if (!strcmp(args[1], "vki")) {
+            controller_V.Ki = new;
+        }
+        if (!strcmp(args[1], "iki")) {
+            controller_I.Ki = new;
+        }
+        if (!strcmp(args[1], "vkp")) {
+            controller_V.Kp = new;
+        }
+        if (!strcmp(args[1], "ikp")) {
+            controller_I.Kp = new;
+        }
+        if (!strcmp(args[1], "vkd")) {
+            controller_V.Kd = new;
+        }
+        if (!strcmp(args[1], "ikd")) {
+            controller_I.Kd = new;
+        }
+        if (!strcmp(args[1], "vid")) {
+            controller_V.Id = new;
+        }
+        if (!strcmp(args[1], "iid")) {
+            controller_I.Id = new;
+        }
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+    if (!strcmp(args[0], "get")) {
+        ttprintf("from tt vbridge: %i, ibridge: %i \r\n", tt.n.bus_v.value, tt.n.batt_i.value);
+        ttprintf("from vars vbridge: %i, ibridge: %i \r\n", vars.v_bridge, vars.i_bridge);
+        ttprintf("v_target: %i, i_target: %i \r\n", vars.v_target, vars.i_target);
+        ttprintf("dtc: %i \r\n", vars.dtc);
+        ttprintf("vki: %i, vkp: %i, vkd: %i, vid: %i \r\n", controller_V.Ki, controller_V.Kp, controller_V.Kd, controller_V.Id);
+        ttprintf("iki: %i, ikp: %i, ikd: %i, iid: %i \r\n", controller_I.Ki, controller_I.Kp, controller_I.Kd, controller_I.Id);
+        ttprintf("v ibus: %i \r\n", ADC_active_sample_buf[0].i_bus);
+        ttprintf("ibus adc %i %i %i %i %i", adc_dma_array[0], adc_dma_array[1], adc_dma_array[2], adc_dma_array[3], adc_dma_array[4]);
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+    if (argCount != 1) {
+        ttprintf("vbus [voltage]\r\n");
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+    
+    uint16_t val = atoi(args[0]);
+    
+    if (!strcmp(args[0], "off") || val < 10) {
+        // kill boost handler
+        temp_pwm_WriteCompare1(0);
+        vars.v_target = 0;
+        stop();
+        alarm_push(ALM_PRIO_INFO, "Boost off", ALM_NO_VALUE);
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+    
+    
+    if (val > 800 || val < 0) {
+        ttprintf("vbus 0-800v");
+        return TERM_CMD_EXIT_SUCCESS;
+    }
+    
+    vars.v_target = val;
+    alarm_push(ALM_PRIO_INFO, "Boost on", vars.v_target);
+    return TERM_CMD_EXIT_SUCCESS;
+}
+
+
 
 /*****************************************************************************
 * Prints the ethernet connections
@@ -644,8 +785,28 @@ uint8_t CMD_bootloader(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args)
 uint8_t CMD_udkill(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     
     if(argCount==0 || strcmp(args[0], "-?") == 0){
+        
+        /*
         ttprintf("Usage: kill [set|reset|get]\r\n");
+        return TERM_CMD_EXIT_SUCCESS;*/
+        
+        
+        // 'kill' is a fast E-stop command
+        interrupter_kill();
+    	USBMIDI_1_callbackLocalMidiEvent(0, (uint8_t*)kill_msg);
+    	bus_command = BUS_COMMAND_OFF;
+        
+        QCW_delete_timer();
+        
+    	interrupter1_control_Control = 0;
+    	QCW_enable_Control = 0;
+    	TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_GREEN);
+    	ttprintf("Killbit set\r\n");
+        alarm_push(ALM_PRIO_CRITICAL, "FAULT: Killbit set", ALM_NO_VALUE);
+    	TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_WHITE);
         return TERM_CMD_EXIT_SUCCESS;
+        
+        
     }
     
     if(strcmp(args[0], "set") == 0){
@@ -665,7 +826,7 @@ uint8_t CMD_udkill(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     }else if(strcmp(args[0], "reset") == 0){
         interrupter_unkill();
         reset_fault();
-        system_fault_Control = 0xFF;
+        sysflt_clr(pdTRUE); 
         TERM_sendVT100Code(handle, _VT100_FOREGROUND_COLOR, _VT100_GREEN);
     	ttprintf("Killbit reset\r\n");
         alarm_push(ALM_PRIO_INFO, "INFO: Killbit reset", ALM_NO_VALUE);
@@ -767,26 +928,22 @@ uint8_t CMD_eeprom(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
     }
     EEPROM_1_UpdateTemperature();
 	uint8 sfflag = system_fault_Read();
-	system_fault_Control = 0; //halt tesla coil operation during updates!
+	sysflt_set(pdTRUE); //halt tesla coil operation during updates!
+    
 	if(strcmp(args[0], "save") == 0){
         EEPROM_check_hash(confparam,PARAM_SIZE(confparam),handle);
 	    EEPROM_write_conf(confparam, PARAM_SIZE(confparam),0, handle);
-
-		system_fault_Control = sfflag;
-		return TERM_CMD_EXIT_SUCCESS;
-	}
-	if(strcmp(args[0], "load") == 0){
-        uint8 sfflag = system_fault_Read();
-        system_fault_Control = 0; //halt tesla coil operation during updates!
+        
+	}else if(strcmp(args[0], "load") == 0){
 		EEPROM_read_conf(confparam, PARAM_SIZE(confparam) ,0,handle);
         
         configure_interrupter();
 	    initialize_charging();
 	    configure_ZCD_to_PWM();
-	    system_fault_Control = sfflag;
-		return TERM_CMD_EXIT_SUCCESS;
 	}
-    return TERM_CMD_EXIT_SUCCESS;
+    
+    system_fault_Control = sfflag;
+	return TERM_CMD_EXIT_SUCCESS;
 }
 
 /*****************************************************************************
@@ -839,26 +996,8 @@ uint8_t CMD_reset(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
 * Switches the user relay 3 or 4
 ******************************************************************************/
 uint8_t CMD_relay(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
-    if(argCount<2 || strcmp(args[0], "-?") == 0){
-        ttprintf("Usage: relay 3/4 [1|0]\r\n");
-        return TERM_CMD_EXIT_SUCCESS;
-    }
     
-    uint8_t r_number = atoi(args[0]);
-    uint8_t value = atoi(args[1]);
-    if(value > 1){
-        ttprintf("Usage: relay 3/4 [1|0]\r\n");
-        return TERM_CMD_EXIT_SUCCESS;
-    }
-    
-    if(r_number == 3){
-        temp_pwm_WriteCompare1(value ? 255 : 0);
-        return TERM_CMD_EXIT_SUCCESS;
-    }
-    if(r_number == 4){
-        temp_pwm_WriteCompare2(value ? 255 : 0);
-        return TERM_CMD_EXIT_SUCCESS;
-    }
+    ttprintf("Disabled");
     return TERM_CMD_EXIT_SUCCESS;
 }
 
@@ -866,25 +1005,7 @@ uint8_t CMD_relay(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
 * Switches the user relay 3 or 4
 ******************************************************************************/
 uint8_t CMD_pwm(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
-    if(argCount<2 || strcmp(args[0], "-?") == 0){
-        ttprintf("Usage: pwm 3/4 [0-255]\r\n");
-        return TERM_CMD_EXIT_SUCCESS;
-    }
-    
-    uint8_t pwm_number = atoi(args[0]);
-    uint8_t value = atoi(args[1]);
-    if(value > 255){
-        value = 255;
-    }
-    
-    if(pwm_number == 3){
-        temp_pwm_WriteCompare1(value);
-        return TERM_CMD_EXIT_SUCCESS;
-    }
-    if(pwm_number == 4){
-        temp_pwm_WriteCompare2(value);
-        return TERM_CMD_EXIT_SUCCESS;
-    }
+    ttprintf("Disabled");
     return TERM_CMD_EXIT_SUCCESS;
 }
 
@@ -926,13 +1047,17 @@ uint8_t CMD_signals(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         ttprintf("Signal state [CTRL+C] for quit:\r\n");
         ttprintf("**************************\r\n");
         ttprintf("UVLO pin: ");
-        send_signal_state_wo_new(UVLO_status_Status,pdTRUE,handle);
-        ttprintf(" Crystal clock: ");
+        send_signal_state_wo_new(UVLO_Read(), pdTRUE, handle);
+        ttprintf(" Clock failure: ");
         #ifndef SIMULATOR
-        send_signal_state_new((CY_GET_XTND_REG8((void CYFAR *)CYREG_FASTCLK_XMHZ_CSR) & 0x80u),pdTRUE,handle);
+        send_signal_state_new(!(CY_GET_XTND_REG8((void CYFAR *)CYREG_FASTCLK_XMHZ_CSR) & 0x80u),pdTRUE,handle);
         #else
         send_signal_state_new(1,pdTRUE,handle);
         #endif
+        ttprintf("Sysfault bus overvoltage: ");
+        send_signal_state_new(sysfault.ov, pdFALSE, handle);
+        ttprintf("Sysfault bus overcurrent: ");
+        send_signal_state_new(sysfault.oc, pdFALSE, handle);
         ttprintf("Sysfault driver undervoltage: ");
         send_signal_state_new(sysfault.uvlo,pdFALSE,handle);
         ttprintf("Sysfault Temp 1: ");
@@ -963,7 +1088,7 @@ uint8_t CMD_signals(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         ttprintf(" Relay 2: ");
         send_signal_state_wo_new(relay_read_charge_end(),pdFALSE,handle);
         ttprintf(" Relay 3: ");
-        send_signal_state_wo_new(Relay3_Read(),pdFALSE,handle);
+        send_signal_state_wo_new(0,pdFALSE,handle);
         ttprintf(" Relay 4: ");
         send_signal_state_new(Relay4_Read(),pdFALSE,handle);
         ttprintf("Fan: ");

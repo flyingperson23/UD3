@@ -9,8 +9,6 @@
 <projects>
 <v>.\UD3_TQFP.cydsn\UD3_TQFP.cyprj</v>
 <v>.\UARTldr_TQFP.cydsn\UARTldr_TQFP.cyprj</v>
-<v>.\UARTldr_QFN.cydsn\UARTldr_QFN.cyprj</v>
-<v>.\UD3_QFN.cydsn\UD3_QFN.cyprj</v>
 </projects>
 <workspace_id v="78827bf6-66d6-4002-ae61-1c9dcd5a5ac2" />
 <WriteAppVersionLastSavedWith v="4.4.0.80" />

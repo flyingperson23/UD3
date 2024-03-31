@@ -142,6 +142,7 @@ static const char * AC_nvm[] = {
 };
 
 static const char * AC_set_get[] = {
+    "autostart",
     "autotune_s",
     "baudrate",
     "boff",
@@ -160,6 +161,8 @@ static const char * AC_set_get[] = {
     "d_calib",
     "ena_display",
     "ena_ext_int",
+    "hw_rev",
+    "ivo_led",
     "ivo_uart",
     "lead_time",
     "max_const_i",
@@ -174,6 +177,7 @@ static const char * AC_set_get[] = {
     "max_tr_prf",
     "max_tr_pw",
     "min_enable",
+    "min_fb_current",
     "min_tr_current",
     "noise_div",
     "offtime",
@@ -209,6 +213,8 @@ static const char * AC_set_get[] = {
     "tune_pw",
     "tune_start",
     "ud_name",
+    "uvlo_analog",
+    "vdrive",
     "watchdog"
 };
 
@@ -350,8 +356,9 @@ void tsk_cli_Start(void) {
         TERM_addCommandConstAC(CMD_nvm, "nvm","NVM-Test Func", AC_nvm,&TERM_cmdListHead); 
         
         TERM_addCommandConstAC(CMD_qcw, "qcw","QCW [start/stop]",AC_start_stop,&TERM_cmdListHead);
-        TERM_addCommand(CMD_relay, "relay","Switch user relay 3/4",0,&TERM_cmdListHead);
-        TERM_addCommand(CMD_pwm, "pwm","Set user pwm 3/4",0,&TERM_cmdListHead);
+        //TERM_addCommand(CMD_relay, "relay","Switch user relay 3/4",0,&TERM_cmdListHead);
+        //TERM_addCommand(CMD_pwm, "pwm","Set user pwm 3/4",0,&TERM_cmdListHead);
+        TERM_addCommand(CMD_vbus, "vbus","Set bus voltage", 0, &TERM_cmdListHead);
         TERM_addCommand(CMD_reset, "reset","Resets UD3",0,&TERM_cmdListHead);
         TERM_addCommand(CMD_status, "status","Displays coil status",0,&TERM_cmdListHead);
         TERM_addCommand(CMD_tterm, "tterm","Changes terminal mode",0,&TERM_cmdListHead);

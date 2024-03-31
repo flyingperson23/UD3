@@ -46,6 +46,8 @@ uint8_t bus_uv;
 uint8_t interlock;
 uint8_t link_state;
 uint8_t feedback;
+uint8_t oc;
+uint8_t ov;
 } SYSFAULT;
 
 extern SYSFAULT sysfault;
@@ -57,6 +59,11 @@ void WD_enable(uint8_t enable);
 void reset_fault();
 void WD_reset();
 void WD_reset_from_ISR();
+void sysflt_set(uint32_t wait);
+void sysflt_clr(uint32_t wait);
+void set_switch_without_fb(uint32_t en);
+
+uint8_t tsk_fault_is_fault();
 
 /*
  * Add user function prototypes in the below merge region to add user

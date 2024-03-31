@@ -35,6 +35,7 @@
 #include "queue.h"
 #include "semphr.h"
 #include "timers.h"
+#include "boost.h"
 #include "interrupter.h"
 #include "helper/FastPID.h"
 
@@ -112,7 +113,7 @@ typedef struct
 _i2t i2t = {
     .limit = 0,
     .warning = 0,
-    .warning_level = 60,
+    .warning_level = 80,
     .leak = 0,
     .integral = 0
 };
@@ -182,6 +183,9 @@ CY_ISR(ADC_data_ready_ISR) {
     } else {
         ADC_active_sample_buf = ADC_sample_buf_0;
     }
+    
+    //boost_loop();
+    
 	xSemaphoreGiveFromISR(adc_ready_Semaphore, NULL);
 }
 
@@ -225,9 +229,9 @@ void init_rms_filter(rms_t *ptr, uint16_t init_val) {
 	ptr->sum_squares = 1UL * SAMPLES_COUNT * init_val * init_val;
 }
 
-uint16_t rms_filter(rms_t *ptr, uint16_t sample) {
+uint16_t rms_filter(rms_t *ptr, int16_t sample) {
 	ptr->sum_squares -= ptr->sum_squares / SAMPLES_COUNT;
-	ptr->sum_squares += (uint32_t)sample * sample;
+	ptr->sum_squares += (int32_t)sample * sample;
 	if (ptr->rms == 0)
 		ptr->rms = 1; /* do not divide by zero */
 	ptr->rms = (ptr->rms + ptr->sum_squares / SAMPLES_COUNT / ptr->rms) / 2;
@@ -248,7 +252,9 @@ uint16_t average_filter(uint32_t *ptr, uint16_t sample) {
 void calculate_rms(void) {
     
     static uint16_t old_curr_setpoint=0;
+    therm = 0;
     for(uint8_t i=0;i<ADC_BUFFER_CNT;i++){
+        therm += ADC_active_sample_buf[i].i_bus;
 
 		// read the battery voltage
 		tt.n.batt_v.value = read_bus_mv(rms_filter(&voltage_batt, ADC_active_sample_buf[i].v_batt)) / 1000;
@@ -257,19 +263,30 @@ void calculate_rms(void) {
 		tt.n.bus_v.value = read_bus_mv(rms_filter(&voltage_bus, ADC_active_sample_buf[i].v_bus)) / 1000;
 
 		// read the battery current
-        if(configuration.ct2_type==CT2_TYPE_CURRENT){
-		    tt.n.batt_i.value = (((uint32_t)rms_filter(&current_idc, ADC_active_sample_buf[i].i_bus) * params.idc_ma_count) / 100);
-        }else{
-            tt.n.batt_i.value = ((((int32_t)rms_filter(&current_idc, ADC_active_sample_buf[i].i_bus)-params.ct2_offset_cnt) * params.idc_ma_count) / 100);
-        }
+        //if(configuration.ct2_type==CT2_TYPE_CURRENT){
+		//    tt.n.batt_i.value = (((uint32_t)rms_filter(&current_idc, ADC_active_sample_buf[i].i_bus) * params.idc_ma_count) / 100);
+        //}else{
+        //    tt.n.batt_i.value = ((((int32_t)rms_filter(&current_idc, ADC_active_sample_buf[i].i_bus-params.ct2_offset_cnt)) * params.idc_ma_count) / 100);
+        //}
+        
+        
+        
 
-		tt.n.avg_power.value = tt.n.batt_i.value * tt.n.bus_v.value / 10;
+        // ct2 is measuring inductor current, which is at input (batt) voltage, not bus voltage
+		//tt.n.avg_power.value = tt.n.batt_i.value * tt.n.bus_v.value / 10;
+        tt.n.avg_power.value = tt.n.batt_i.value * tt.n.batt_v.value / 10;
+        
 	}
+    //tt.n.batt_i.value = vars.i_bridge;
+    tt.n.batt_i.value = ((uint32_t) rms_filter(&current_idc, vars.i_bridge / 10));
+    therm /= ADC_BUFFER_CNT;
     
-    // read the driver voltage
-    tt.n.driver_v.value = read_driver_mv(ADC_active_sample_buf[0].v_driver);
     tt.n.primary_i.value = CT1_Get_Current(CT_PRIMARY);
     
+    
+    
+    
+    /*     decrease voltage in boost instead of duty cycle here
     if(configuration.max_dc_curr){
         param.temp_duty = configuration.max_tr_duty-pid_step(&pid_current,configuration.max_dc_curr,tt.n.batt_i.value);
         if(param.temp_duty != old_curr_setpoint){
@@ -280,7 +297,10 @@ void calculate_rms(void) {
             }
         }
         old_curr_setpoint = param.temp_duty;
-    }
+    }*/
+    
+    
+    
     
     if(configuration.max_const_i){  //Only do i2t calculation if enabled
         switch (i2t_calculate()){
@@ -379,7 +399,7 @@ void ac_precharge_bus_scheme(){
 	if (charging_counter > AC_PRECHARGE_TIMEOUT) {
 		final_vbus = tt.n.bus_v.value;
 		delta_vbus = final_vbus - initial_vbus;
-		if ((delta_vbus < 4) && (tt.n.bus_v.value > 20) && tt.n.bus_status.value == BUS_CHARGING) {
+		if ((delta_vbus < 1) && (tt.n.bus_v.value > 20) && tt.n.bus_status.value == BUS_CHARGING) {
             if(!timer_triggerd){
                 timer_triggerd=1;
 			    xTimerStart(xCharge_Timer,0);
@@ -397,6 +417,12 @@ void ac_precharge_bus_scheme(){
 }
 
 void ac_dual_meas_scheme(){
+    if(!relay_read_bus() && !relay_read_charge_end()){
+        alarm_push(ALM_PRIO_INFO, "BUS: Charging", ALM_NO_VALUE);
+        sysfault.charge=1;
+        relay_write_bus(1);
+        tt.n.bus_status.value = BUS_CHARGING;
+    }    
 }
 
 void ac_precharge_fixed_delay(){
@@ -406,7 +432,7 @@ void ac_precharge_fixed_delay(){
         xTimerStart(xCharge_Timer,0);
         relay_write_bus(1);
         tt.n.bus_status.value = BUS_CHARGING;
-    }    
+    }
 }
 
 void vCharge_Timer_Callback(TimerHandle_t xTimer){
@@ -442,7 +468,7 @@ void control_precharge(void) { //this gets called from tsk_analogs.c when the AD
                 ac_precharge_bus_scheme();
             break;
             case AC_DUAL_MEAS_SCHEME:
-                ac_dual_meas_scheme();      // Not implemented
+                ac_dual_meas_scheme();
             break;
             case AC_PRECHARGE_FIXED_DELAY:
                 ac_precharge_fixed_delay();

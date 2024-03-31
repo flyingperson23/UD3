@@ -37,11 +37,11 @@
 #define AE_QUEUE_SIZE       50          //Length of the alarm and event queue
     
 //Analog-Task
-#define ADC_BUFFER_CNT      25          //ADC DMA buffer
+#define ADC_BUFFER_CNT      16          //ADC DMA buffer
 #define ADC_SAMPLE_CLK      32000       //Hz
 #define NEW_DATA_RATE_MS    ((1.0/(ADC_SAMPLE_CLK/4)) * ADC_BUFFER_CNT)    //ms
 #define CURRENT_PID_HZ      ((uint16_t)(1.0 / NEW_DATA_RATE_MS))           //Hz
-#define SAMPLES_COUNT       2048             //How many samples for RMS filter
+#define SAMPLES_COUNT       32             //How many samples for RMS filter
 #define BUSV_R_BOT          5000UL           //Bus voltage bottom resistor
     
 //Synthesizer
@@ -51,15 +51,14 @@
 
 #define RELAY1_INVERTED 0
 #define RELAY2_INVERTED 0
-#define LED4_INVERTED   0
 
-#if LED4_INVERTED
-    #define LED4_ON  0
-    #define LED4_OFF 1
-#else
-    #define LED4_ON  1
-    #define LED4_OFF 0
-#endif
+#define LED_ON  (configuration.ivo_led ? 0 : 1)
+#define LED_OFF (configuration.ivo_led ? 1 : 0)
+
+#define IVO_UART_RX_BIT  0
+#define IVO_UART_TX_BIT  1
+#define IVO_LED_BIT      2
+
 
     
 #endif

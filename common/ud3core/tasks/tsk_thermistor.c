@@ -28,6 +28,7 @@
 
 #include "tsk_thermistor.h"
 #include "tsk_fault.h"
+#include "tsk_analog.h"
 #include "alarmevent.h"
 #include "helper/FastPID.h"
 
@@ -42,7 +43,7 @@ uint8 tsk_thermistor_initVar = 0u;
 
 FastPID pid_temp;
 
-SemaphoreHandle_t adc_sem;
+//SemaphoreHandle_t adc_sem;
 
 enum fan_mode{
     FAN_NORMAL = 0,
@@ -127,9 +128,9 @@ void calc_table_128(int16_t t_table[], uint8_t bits, uint16_t table_size, uint32
 /* `#START USER_TASK_LOCAL_CODE` */
 
 void initialize_thermistor(void) {
-	IDAC_therm_Start();
-	ADC_therm_Start();
-    Therm_Mux_Start();
+	//IDAC_therm_Start();
+	//ADC_therm_Start();
+    //Therm_Mux_Start();
 	temp_pwm_Start();
 }
 
@@ -145,13 +146,14 @@ int32_t get_temp_128(int32_t counts) {
 }
 
 int32_t get_temp_counts(uint8_t channel){
-    Therm_Mux_Select(channel);
-    vTaskDelay(50);     // DS: this used to delay just 20 ticks which wasn't long enough on my board.
+    //Therm_Mux_Select(channel);
+    vTaskDelay(100);     // DS: this used to delay just 20 ticks which wasn't long enough on my board.
                         // The temps were all off by 10 degrees or so.  Once I changed this to 50 the 
                         // temps were all within a degree of where they should be.
-    ADC_therm_StartConvert();
-    vTaskDelay(50);
-    int16_t temp = ADC_therm_GetResult16()-ADC_therm_Offset;
+    //ADC_therm_StartConvert();
+    vTaskDelay(100);
+    //int16_t temp = ADC_therm_GetResult16()-ADC_therm_Offset;
+    int16_t temp = therm - offset;
     if(temp<0)temp=0;
     return temp;
 }
@@ -195,14 +197,15 @@ void run_temp_check(TEMP_FAULT * ret) {
             
             break;
         case FAN_TEMP2_RELAY3:
-            Fan_Write(temp1_high);
-            temp_pwm_WriteCompare1(temp2_high? 255 :0);
+            //Fan_Write(temp1_high);
+            //temp_pwm_WriteCompare1(temp2_high? 255 :0);
             break;
         case FAN_TEMP2_RELAY4:
             Fan_Write(temp1_high);
             temp_pwm_WriteCompare2(temp2_high? 255 :0);
             break;
     }
+    /*
     switch(configuration.pid_temp_mode){
         case 0:
             break;
@@ -218,7 +221,7 @@ void run_temp_check(TEMP_FAULT * ret) {
         case 4:
             temp_pwm_WriteCompare2(255-pid_step(&pid_temp,configuration.pid_temp_set*128,temp2_fp));
             break;
-    }
+    }*/
 	return;
 }
 
@@ -229,7 +232,7 @@ uint8_t callback_ntc(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * 
 }
 
 uint8_t CMD_ntc(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
-    xSemaphoreTake(adc_sem, portMAX_DELAY);
+    //xSemaphoreTake(adc_sem, portMAX_DELAY);
     
     ttprintf("Connect a precision 10k to therm 1\r\n");
     ttprintf("Press [y] to proceed\r\n");
@@ -239,36 +242,39 @@ uint8_t CMD_ntc(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
         return TERM_CMD_EXIT_SUCCESS;
     }
     
-    Therm_Mux_Select(THERM_1);
+    //Therm_Mux_Select(THERM_1);
     vTaskDelay(100);
-    ADC_therm_StartConvert();
+    //ADC_therm_StartConvert();
     vTaskDelay(100);
-    float temp = ADC_therm_CountsTo_Volts(ADC_therm_GetResult16())*100;
+    float temp = ADC_CountsTo_Volts(therm-offset)*100;
     configuration.idac = temp;
     ttprintf("Calibration finished: %u uA\r\n", configuration.idac);
     ttprintf("Recalculate NTC LUT...\r\n");
     callback_ntc(NULL, 0, handle);
     ttprintf("Finished... Please save to eeprom.\r\n");
-    xSemaphoreGive(adc_sem);
+    //xSemaphoreGive(adc_sem);
     return TERM_CMD_EXIT_SUCCESS;
 }
 
 void calib_adc(){
     
+    /*
     IDAC_therm_SetValue(THERM_DAC_VAL*3);
     Therm_Mux_Select(THERM_GND);
-    vTaskDelay(50);
+    vTaskDelay(100);
     int32_t cnt=0;
     for(uint8_t i = 0;i<4;i++){
-        ADC_therm_StartConvert();
-        vTaskDelay(50);
-        cnt += ADC_therm_GetResult16();
+        //ADC_therm_StartConvert();
+        vTaskDelay(100);
+        cnt += therm;
         if(i==3){
             cnt /= 4;
-            ADC_therm_SetOffset(cnt);
+            offset = cnt;
             alarm_push(ALM_PRIO_INFO, "ADC: Temperature ADC offset", cnt);
         }
     }    
+    */
+    offset = 0;
 }
 
 uint8_t callback_temp_pid(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle){
@@ -291,6 +297,9 @@ uint8_t callback_temp_pid(parameter_entry * params, uint8_t index, TERMINAL_HAND
  * to add functionality to the task.
  */
 void tsk_thermistor_TaskProc(void *pvParameters) {
+    
+    
+    
 	/*
 	 * Add and initialize local variables that are allocated on the Task stack
 	 * the the section below.
@@ -305,8 +314,11 @@ void tsk_thermistor_TaskProc(void *pvParameters) {
 	 */
 	/* `#START TASK_INIT_CODE` */
     
-    adc_sem = xSemaphoreCreateBinary();
-    xSemaphoreGive(adc_sem);
+    //adc_sem = xSemaphoreCreateBinary();
+    //xSemaphoreGive(adc_sem);
+    
+    
+    /*
     
 	initialize_thermistor();
     calib_adc();
@@ -321,11 +333,11 @@ void tsk_thermistor_TaskProc(void *pvParameters) {
     
     callback_temp_pid(NULL,0,NULL);
 
-	/* `#END` */
+	
     alarm_push(ALM_PRIO_INFO, "TASK: Thermistor started", ALM_NO_VALUE);
 	for (;;) {
-        xSemaphoreTake(adc_sem, portMAX_DELAY);
-		/* `#START TASK_LOOP_CODE` */
+        //xSemaphoreTake(adc_sem, portMAX_DELAY);
+		
         run_temp_check(&temp);
         
                 
@@ -342,15 +354,18 @@ void tsk_thermistor_TaskProc(void *pvParameters) {
             }
             sysfault.temp2 = 1;
         }
-        xSemaphoreGive(adc_sem);
+        //xSemaphoreGive(adc_sem);
       
-		/* `#END` */
+		
         if(configuration.pid_temp_mode != 0){
             vTaskDelay(100 / portTICK_PERIOD_MS);
         } else {
 		    vTaskDelay(1000 / portTICK_PERIOD_MS);
         }
 	}
+    
+    
+    */
 }
 /* ------------------------------------------------------------------------ */
 void tsk_thermistor_Start(void) {

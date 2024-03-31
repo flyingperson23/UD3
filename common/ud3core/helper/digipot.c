@@ -22,38 +22,56 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#if !defined(tsk_thermistor_TASK_H)
-#define tsk_thermistor_TASK_H
+#include "digipot.h"
+#include "FreeRTOS.h"
+#include "task.h"
 
-/*
- * Add user task definitions, types, includes and other things in the below
- * merge region to customize the task.
- */
-/* `#START USER_TYPES_AND_DEFINES` */
-#include <device.h>
-#include "cli_basic.h"
-#include "TTerm.h"    
+#define R_DCDC_TOP 82000.0
+#define R_DCDC_BOTTOM 2700.0
+#define R_DIGIPOT 5000.0
 
-/* `#END` */
+void digipot_write(uint8_t value){
+ 
+    uint8_t bit_to_write=0;
+    uint8_t bit_shift = 7;
+    
+    digipot_ncs_Write(0); //select digipot
+    
+    CyDelayUs(1);
+    
+    for(uint32_t i=0;i<8;i++){
+        
+        digipot_clk_Write(0);
+        
+        bit_to_write = (value >> bit_shift) & 0x01;
+        
+        digipot_data_Write(bit_to_write);
+        
+        CyDelayUs(1); 
+        
+        digipot_clk_Write(1);
+        
+        bit_shift--;
+        
+        CyDelayUs(1); 
+    }
+    
+    digipot_clk_Write(0);
+    digipot_data_Write(0);
+    
+    digipot_ncs_Write(1); //deselect digipot
+    
+}
 
-void tsk_thermistor_Start(void);
-
-uint8_t callback_ntc(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
-uint8_t callback_temp_pid(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
-
-uint8_t CMD_ntc(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
-
-int32 offset;
-
-
-/*
- * Add user function prototypes in the below merge region to add user
- * functionality to the task definition.
- */
-/* `#START USER_TASK_PROTOS` */
-
-/* `#END` */
-
-/* ------------------------------------------------------------------------ */
-#endif
-/* [] END OF FILE */
+void digipot_set_voltage(float voltage){
+    
+    float r_pot = (voltage * R_DCDC_BOTTOM - 0.8 * R_DCDC_BOTTOM - 0.8 * R_DCDC_TOP) / -voltage + 0.8;
+    
+    float data = 255.0 - 255.0 / R_DIGIPOT * r_pot;
+    
+    if(data > 255.0) data = 255.0;
+    if(data < 0.0) data = 0.0;
+    
+    digipot_write(data);
+    
+}

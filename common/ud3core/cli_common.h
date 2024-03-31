@@ -65,7 +65,10 @@ uint8_t CMD_qcw(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 uint8_t CMD_relay(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 uint8_t CMD_pwm(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 uint8_t CMD_reset(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
+uint8_t CMD_vbus(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args);
 
+uint8_t callback_max_dc_curr(parameter_entry * params, uint8_t index, TERMINAL_HANDLE * handle);
+    
 void send_signal_state_new(uint8_t signal, uint8_t inverted, TERMINAL_HANDLE * handle);
 void send_signal_state_wo_new(uint8_t signal, uint8_t inverted, TERMINAL_HANDLE * handle);
 
@@ -127,7 +130,13 @@ struct config_struct{
     uint16_t ntc_r25;
     uint16_t idac;
     uint16_t noise_vol_div;
+    uint8_t ivo_led;
+    uint16_t uvlo_analog;
     char synth_filter[32];
+    float vdrive;
+    uint8_t hw_rev;
+    uint8_t autostart;
+    uint8_t min_fb_current;
 };
 typedef struct config_struct cli_config;
 
