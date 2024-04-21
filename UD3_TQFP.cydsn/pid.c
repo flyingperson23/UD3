@@ -8,25 +8,10 @@ void constrain(int *x, int min, int max){
 }
 
 int PID_Update(PIDStruct *controller, int error_in) {
-   
-    // error
-	//controller->E = error_in;
-    controller->E = error_in * controller->Kp;
-    constrain(&(controller->E), -02000000, 02000000);
-    
-    // integral
-    if (controller->Ki != 0) {
-        controller->I += controller->E;
-    } else {
-        controller->I = 0;
-    }
-    
-    // derivative
-    controller->D = controller->E - controller->E2;
-    controller->E2 = controller->E;
-    
-    //controller->Y = (controller->Kp * controller->E * (error_in < 0 ? 1.6 : 1)) + ((controller->Ki * controller->I) / controller->Id) + (controller->Kd * controller->D);
-    controller->Y = (controller->E * (error_in < 0 ? 1.6 : 1)) + ((controller->Ki * controller->I) / controller->Id) + (controller->Kd * controller->D);
-    //constrain(&(controller->Y), -02000000, 02000000);
-    return controller->Y;
+    controller->m[1] = controller->m[0];
+    controller->e[2] = controller->e[1];
+    controller->e[1] = controller->e[0];
+    controller->e[0] = error_in;
+    controller->m[0] = (controller->Kp + controller->Ki + controller->Kd) * controller->e[0] - (controller->Kp + 2*controller->Kd) * controller->e[1] + controller->Kd * controller->e[2] + controller->m[1];
+    return controller->m[0];
 }

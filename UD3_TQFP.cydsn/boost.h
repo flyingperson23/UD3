@@ -11,14 +11,13 @@
     struct boost {
         int v_bridge; //current bridge voltage
         int v_target; //voltage setpoint
-        int v_rq; //voltage requested by current controller
-        int v_target2; // slowly changing target voltage
+        int v_target2; //slowly changing target voltage
+        int v_in; //rectified AC voltage
         
         int i_bridge; //current current  (*10)
         int i_target; //target current  (*10)
         
         int dtc; //duty cycle
-        
     };
     typedef struct boost BoostStruct;
     
@@ -33,7 +32,7 @@
     extern BoostStruct vars;
     
     void dma_config();
-    int16 adc_dma_array[5];
+    int16 adc_dma_array[4];
     
     void boost_init();
     void setIMax();

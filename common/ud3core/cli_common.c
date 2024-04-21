@@ -132,7 +132,7 @@ void init_config(){
     configuration.baudrate = 460800;
     configuration.r_top = 500000;
     strncpy(configuration.ud_name,"UD3-Tesla", sizeof(configuration.ud_name));
-    strncpy(configuration.synth_filter,"f<0f>20000", sizeof(configuration.ud_name));  //No filter
+    strncpy(configuration.synth_filter,"f<0f>20000", sizeof(configuration.synth_filter));  //No filter
     configuration.minprot = pdFALSE;
     configuration.max_const_i = 0;
     configuration.max_fault_i = 250;
@@ -628,12 +628,6 @@ uint8_t CMD_vbus(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
         if (!strcmp(args[1], "ikd")) {
             controller_I.Kd = new;
         }
-        if (!strcmp(args[1], "vid")) {
-            controller_V.Id = new;
-        }
-        if (!strcmp(args[1], "iid")) {
-            controller_I.Id = new;
-        }
         return TERM_CMD_EXIT_SUCCESS;
     }
     if (!strcmp(args[0], "get")) {
@@ -641,10 +635,11 @@ uint8_t CMD_vbus(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
         ttprintf("from vars vbridge: %i, ibridge: %i \r\n", vars.v_bridge, vars.i_bridge);
         ttprintf("v_target: %i, i_target: %i \r\n", vars.v_target, vars.i_target);
         ttprintf("dtc: %i \r\n", vars.dtc);
-        ttprintf("vki: %i, vkp: %i, vkd: %i, vid: %i \r\n", controller_V.Ki, controller_V.Kp, controller_V.Kd, controller_V.Id);
-        ttprintf("iki: %i, ikp: %i, ikd: %i, iid: %i \r\n", controller_I.Ki, controller_I.Kp, controller_I.Kd, controller_I.Id);
+        ttprintf("vki: %i, vkp: %i, vkd: %i \r\n", controller_V.Ki, controller_V.Kp, controller_V.Kd);
+        ttprintf("iki: %i, ikp: %i, ikd: %i \r\n", controller_I.Ki, controller_I.Kp, controller_I.Kd);
         ttprintf("v ibus: %i \r\n", ADC_active_sample_buf[0].i_bus);
-        ttprintf("ibus adc %i %i %i %i %i", adc_dma_array[0], adc_dma_array[1], adc_dma_array[2], adc_dma_array[3], adc_dma_array[4]);
+        ttprintf("ibus adc %i %i %i %i \r\n", adc_dma_array[0], adc_dma_array[1], adc_dma_array[2], adc_dma_array[3]);
+        ttprintf("vtarget_2 %i \r\n", vars.v_target2);
         return TERM_CMD_EXIT_SUCCESS;
     }
     if (argCount != 1) {

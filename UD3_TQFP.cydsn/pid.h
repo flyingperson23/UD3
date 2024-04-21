@@ -5,12 +5,8 @@ typedef struct{
     int Ki;  // integral constant
     int Kp;  // proportional constant
     int Kd;  // derivative constant
-    int I;  // integral
-    int E;  // error
-    int E2; // last error
-    int D;  // derivative
-    int Y; // output
-    int Id; // integral divisor
+    int m[5]; // output
+    int e[5]; // error
 
 	} PIDStruct;
 
