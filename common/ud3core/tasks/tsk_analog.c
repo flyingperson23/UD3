@@ -42,6 +42,7 @@
 #include <stdlib.h>
 #include "math.h"
 
+#include "therm.h"
 
 xTaskHandle tsk_analog_TaskHandle;
 uint8 tsk_analog_initVar = 0u;
@@ -100,6 +101,8 @@ rms_t voltage_batt;
 uint8_t ADC_mux_ctl[4] = {0x05, 0x02, 0x03, 0x00};
 
 uint16_t vdriver_lut[9] = {0,3500,7000,10430,13840,17310,20740,24200,27657};
+
+uint32_t therm = 0;
 
 typedef struct
 {
@@ -280,6 +283,9 @@ void calculate_rms(void) {
     //tt.n.batt_i.value = vars.i_bridge;
     tt.n.batt_i.value = ((uint32_t) rms_filter(&current_idc, vars.i_bridge));
     therm /= ADC_BUFFER_CNT;
+    therm = therm >> 4;
+    if (therm > 255) therm = 255;
+    tt.n.temp1.value = ((uint32_t) thermlut[therm]) * tt.n.temp1.divider;
     
     tt.n.primary_i.value = CT1_Get_Current(CT_PRIMARY);
     

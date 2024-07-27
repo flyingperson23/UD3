@@ -83,7 +83,8 @@ void initialize_charging(void);
 void control_precharge(void);
 extern uint16_t vdriver_lut[9];
 
-uint16_t therm;
+extern uint32_t therm;
+
 
 typedef struct
 {

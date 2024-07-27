@@ -51,6 +51,7 @@
 #include "tasks/tsk_hypervisor.h"
 
 #include "boost.h"
+#include "therm.h"
 
 /*
  * Installs the RTOS interrupt handlers and starts the peripherals.
@@ -78,7 +79,7 @@ int main() {
     
     eeprom_load(null_handle);
    
-    
+    therm_init();
 	initialize_DMA();		  //sets up all DMA channels
 	initialize_interrupter(); //initializes hardware related to the interrupter
 	initialize_ZCD_to_PWM();  //initializes hardware related to ZCD to PWM
