@@ -3,21 +3,21 @@
     #ifndef BOOST_H
     #define BOOST_H
     
-    #include "pid.h"
+    #include "comp.h"
     #include <device.h>
     #include <stdint.h>
     
         
     struct boost {
-        int v_bridge; //current bridge voltage
-        int v_target; //voltage setpoint
-        int v_target2; //slowly changing target voltage
-        int v_in; //rectified AC voltage
+        int64_t v_bridge; //current bridge voltage (mV)
+        int64_t v_target; //voltage setpoint
+        int64_t v_target2; //slowly changing target voltage
+        int64_t v_in; //rectified AC voltage
         
-        int i_bridge; //current current  (*10)
-        int i_target; //target current  (*10)
+        int64_t i_bridge; //current current  (mA)
+        int64_t i_target; //target current
         
-        int dtc; //duty cycle
+        int64_t dtc; //duty cycle
     };
     typedef struct boost BoostStruct;
     
@@ -27,12 +27,12 @@
     };
     typedef struct dma Dma;
     
-    extern PIDStruct controller_V;
-    extern PIDStruct controller_I;
+    extern StructComp controller_V;
+    extern StructComp controller_I;
     extern BoostStruct vars;
     
     void dma_config();
-    int16 adc_dma_array[4];
+    int16 adc_dma_array[1];
     
     void boost_init();
     void setIMax();

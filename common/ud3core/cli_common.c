@@ -267,7 +267,7 @@ parameter_entry confparam[] = {
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"synth_filter"    , configuration.synth_filter    , 0      ,0      ,0      ,callback_synthFilter        ,"Synthesizer filter string")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"pid_curr_p"      , configuration.pid_curr_p      , 0      ,200    ,0      ,callback_pid                ,"Current PI")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"pid_curr_i"      , configuration.pid_curr_i      , 0      ,200    ,0      ,callback_pid                ,"Current PI")
-    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_dc_curr"     , configuration.max_dc_curr     , 0      ,2000   ,10     ,callback_max_dc_curr        ,"Maximum DC-Bus current [A] 0=off")
+    ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"max_dc_curr"     , configuration.max_dc_curr     , 0      ,5000   ,10     ,callback_max_dc_curr        ,"Maximum DC-Bus current [A] 0=off")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"ena_ext_int"     , configuration.ext_interrupter , 0      ,2      ,0      ,callback_ext_interrupter    ,"Enable external interrupter 2=inverted")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"qcw_coil"        , configuration.is_qcw          , 0      ,1      ,0      ,NULL                        ,"Is QCW 1=true 0=false")
     ADD_PARAM(PARAM_CONFIG  ,pdTRUE ,"vol_mod"         , interrupter.mod               , 0      ,1      ,0      ,callback_interrupter_mod    ,"0=pw 1=current modulation")
@@ -609,7 +609,7 @@ uint8_t CMD_vbus(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
         return TERM_CMD_EXIT_SUCCESS;
     }
     if (!strcmp(args[0], "cfg")) {
-        uint32_t new = ((uint32_t) atoi(args[2]));
+        int64_t new = ((int64_t) atoi(args[2]));
         if (!strcmp(args[1], "vki")) {
             controller_V.Ki = new;
         }
@@ -628,6 +628,9 @@ uint8_t CMD_vbus(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
         if (!strcmp(args[1], "ikd")) {
             controller_I.Kd = new;
         }
+        if (!strcmp(args[1], "va")) {
+            controller_V.a = new;
+        }
         return TERM_CMD_EXIT_SUCCESS;
     }
     if (!strcmp(args[0], "get")) {
@@ -635,10 +638,11 @@ uint8_t CMD_vbus(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
         ttprintf("from vars vbridge: %i, ibridge: %i \r\n", vars.v_bridge, vars.i_bridge);
         ttprintf("v_target: %i, i_target: %i \r\n", vars.v_target, vars.i_target);
         ttprintf("dtc: %i \r\n", vars.dtc);
+        ttprintf("v-a: %i \r\n", controller_V.a);
         ttprintf("vki: %i, vkp: %i, vkd: %i \r\n", controller_V.Ki, controller_V.Kp, controller_V.Kd);
         ttprintf("iki: %i, ikp: %i, ikd: %i \r\n", controller_I.Ki, controller_I.Kp, controller_I.Kd);
-        ttprintf("v ibus: %i \r\n", ADC_active_sample_buf[0].i_bus);
-        ttprintf("ibus adc %i %i %i %i \r\n", adc_dma_array[0], adc_dma_array[1], adc_dma_array[2], adc_dma_array[3]);
+        ttprintf("v therm: %i \r\n", ADC_active_sample_buf[0].i_bus);
+        ttprintf("ibus adc %i \r\n", adc_dma_array[0]);
         ttprintf("vtarget_2 %i \r\n", vars.v_target2);
         return TERM_CMD_EXIT_SUCCESS;
     }
@@ -664,7 +668,7 @@ uint8_t CMD_vbus(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args) {
         return TERM_CMD_EXIT_SUCCESS;
     }
     
-    vars.v_target = val;
+    vars.v_target = val * 1000;
     alarm_push(ALM_PRIO_INFO, "Boost on", vars.v_target);
     return TERM_CMD_EXIT_SUCCESS;
 }
@@ -1085,7 +1089,7 @@ uint8_t CMD_signals(TERMINAL_HANDLE * handle, uint8_t argCount, char ** args){
         ttprintf(" Relay 3: ");
         send_signal_state_wo_new(0,pdFALSE,handle);
         ttprintf(" Relay 4: ");
-        send_signal_state_new(Relay4_Read(),pdFALSE,handle);
+        send_signal_state_wo_new(0,pdFALSE,handle);
         ttprintf("Fan: ");
         send_signal_state_wo_new(Fan_Read(),pdFALSE,handle);
         ttprintf(" Bus status: ");

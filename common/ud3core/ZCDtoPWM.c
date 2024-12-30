@@ -93,7 +93,7 @@ void configure_CT1(void) {
 void configure_CT2(void) {
     if(configuration.ct2_type==CT2_TYPE_CURRENT){
         //DC CT mA_Count
-        params.idc_ma_count = (uint32_t)((configuration.ct2_ratio * 50 * 1000) / configuration.ct2_burden) / 4096;
+        params.idc_ma_count = (uint32_t)((configuration.ct2_ratio * 50 * 1000) / configuration.ct2_burden) / 2048; // 11 bit = 2048
     }else{
         params.ct2_offset_cnt = (uint32_t)(4096ul*(uint32_t)configuration.ct2_offset)/5000ul;
         uint32_t cnt_fs = ((4096ul*(uint32_t)configuration.ct2_voltage)/5000ul)-params.ct2_offset_cnt;

@@ -256,15 +256,17 @@ void calculate_rms(void) {
     
     static uint16_t old_curr_setpoint=0;
     therm = 0;
+    int32_t batt_v = 0;
+    int32_t bus_v = 0;
     for(uint8_t i=0;i<ADC_BUFFER_CNT;i++){
         therm += ADC_active_sample_buf[i].i_bus;
 
 		// read the battery voltage
 		tt.n.batt_v.value = read_bus_mv(rms_filter(&voltage_batt, ADC_active_sample_buf[i].v_batt)) / 1000;
-
+        batt_v += read_bus_mv(ADC_active_sample_buf[i].v_batt);
 		// read the bus voltage
 		tt.n.bus_v.value = read_bus_mv(rms_filter(&voltage_bus, ADC_active_sample_buf[i].v_bus)) / 1000;
-
+        bus_v += read_bus_mv(ADC_active_sample_buf[i].v_bus);
 		// read the battery current
         //if(configuration.ct2_type==CT2_TYPE_CURRENT){
 		//    tt.n.batt_i.value = (((uint32_t)rms_filter(&current_idc, ADC_active_sample_buf[i].i_bus) * params.idc_ma_count) / 100);
@@ -280,8 +282,10 @@ void calculate_rms(void) {
         tt.n.avg_power.value = tt.n.batt_i.value * tt.n.batt_v.value / 10;
         
 	}
+    vars.v_in = batt_v >> 4;
+    vars.v_bridge = bus_v >> 4;
     //tt.n.batt_i.value = vars.i_bridge;
-    tt.n.batt_i.value = ((uint32_t) rms_filter(&current_idc, vars.i_bridge));
+    tt.n.batt_i.value = ((uint32_t) rms_filter(&current_idc, vars.i_bridge / 100));
     therm /= ADC_BUFFER_CNT;
     therm = therm >> 4;
     if (therm > 255) therm = 255;

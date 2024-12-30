@@ -26,10 +26,11 @@ void therm_init() {
 
 uint8_t therm_convert(uint16_t adc) {
     if (adc != 4096) {
-        double a = ((double) adc) / (4096.0 - ((double)adc));
+        double voltage = adc * 5.0 / 4096.0;
+        double R = 10000.0*voltage/(5.0 - voltage);
+        double a = log(R/((double) configuration.ntc_r25)) / ((double) configuration.ntc_b) + (1.0 / 298.15);
         if (a != 0) {
-            double b = (log(a) / ((double)configuration.ntc_b)) + (1.0 / 298.15);
-            double c = (1.0 / b) - 273.15;
+            double c = (1.0 / a) - 273.15;
             if (c < 0) c = 0;
             if (c > 255) c = 255;
             return (uint8_t) c;
